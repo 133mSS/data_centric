@@ -90,7 +90,10 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     if not allowed_document_ids:
         return [], denied_shadow_chunks
 
-    # Controlled retrieval remains ACL-filtered before ranking/top-k.
+    # Controlled retrieval remains ACL-filtered before ranking. Fetch a bounded
+    # candidate pool, then rerank it with title/query lexical relevance.
+    # ABAC is applied in SQL before candidate generation; this never broadens access.
+    candidate_k = min(max(top_k * 4, top_k), 50)
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -105,10 +108,31 @@ def vector_search_with_audit(conn, user, query, top_k=3):
             ORDER BY c.embedding <=> %s::vector
             LIMIT %s
             """,
-            (query_vector, allowed_document_ids, query_vector, top_k),
+            (query_vector, allowed_document_ids, query_vector, candidate_k),
         )
-        authorized_chunks = cur.fetchall()
+        candidates = cur.fetchall()
 
+    import re
+
+    def _terms(value):
+        return {
+            token for token in re.findall(r"[0-9A-Za-zÀ-ỹ_]+", (value or "").casefold())
+            if len(token) >= 2
+        }
+
+    query_terms = _terms(query)
+    ranked = []
+    for row in candidates:
+        title = str(row[2] or "")
+        title_terms = _terms(title)
+        overlap = len(query_terms & title_terms)
+        exact_phrase = bool(query.strip()) and query.strip().casefold() in title.casefold()
+        lexical_boost = (0.12 if exact_phrase else 0.0) + min(overlap, 4) * 0.012
+        vector_similarity = float(row[6] or 0.0)
+        ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
+
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    authorized_chunks = [item[2] for item in ranked[:top_k]]
     return authorized_chunks, denied_shadow_chunks
 
 
