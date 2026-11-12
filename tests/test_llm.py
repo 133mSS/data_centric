@@ -29,3 +29,26 @@ def test_generate_answer_uses_deterministic_options():
         "seed": 42,
     }
     assert result == "Câu trả lời thử nghiệm"
+
+
+
+def test_mixed_indonesian_answer_is_repaired():
+    first = Mock()
+    first.raise_for_status.return_value = None
+    first.json.return_value = {
+        "response": "Công ty ABC ra mắt pada quý 3/2026, yang mendukung usaha kecil."
+    }
+    repaired = Mock()
+    repaired.raise_for_status.return_value = None
+    repaired.json.return_value = {
+        "response": "Công ty ABC dự kiến ra mắt sản phẩm vào quý III/2026."
+    }
+    chunks = [
+        (1, 1, "Thông báo ra mắt sản phẩm", "Công khai", None,
+         "Công ty ABC dự kiến ra mắt sản phẩm vào quý III/2026.")
+    ]
+    with patch("app.llm.requests.post", side_effect=[first, repaired]) as mock_post:
+        result = generate_answer("Công ty ABC ra mắt sản phẩm khi nào?", chunks)
+    assert "pada" not in result
+    assert "yang" not in result
+    assert mock_post.call_count == 2
