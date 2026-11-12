@@ -115,18 +115,30 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     import re
 
     def _terms(value):
+        # Vietnamese diacritics are preserved; ignore very short tokens.
         return {
             token for token in re.findall(r"[0-9A-Za-zÀ-ỹ_]+", (value or "").casefold())
             if len(token) >= 2
         }
 
+    def _strip_vietnamese_diacritics(value):
+        import unicodedata
+        decomposed = unicodedata.normalize("NFD", (value or "").casefold())
+        return "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn").replace("đ", "d")
+
     query_terms = _terms(query)
+    query_terms_folded = {_strip_vietnamese_diacritics(t) for t in query_terms}
     ranked = []
     for row in candidates:
         title = str(row[2] or "")
         title_terms = _terms(title)
-        overlap = len(query_terms & title_terms)
-        exact_phrase = bool(query.strip()) and query.strip().casefold() in title.casefold()
+        title_terms_folded = {_strip_vietnamese_diacritics(t) for t in title_terms}
+        overlap = len(query_terms_folded & title_terms_folded)
+        exact_phrase = (
+            bool(query.strip())
+            and _strip_vietnamese_diacritics(query.strip())
+            in _strip_vietnamese_diacritics(title)
+        )
         lexical_boost = (0.12 if exact_phrase else 0.0) + min(overlap, 4) * 0.012
         vector_similarity = float(row[6] or 0.0)
         ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
