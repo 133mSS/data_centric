@@ -199,7 +199,7 @@ def test_short_title_phrase_receives_title_coverage_boost(monkeypatch):
             (7, 11, "Thông báo bảo trì", "Nội bộ", "Kỹ thuật",
              "Nội dung bảo trì", 0.65, "MAINTENANCE_NOTICE"),
             (6, 10, "Mã nguồn hệ thống RAG", "Nội bộ", "Kỹ thuật",
-             "Module policy_engine.py kiểm tra quyền truy cập.", 0.65, "TECHNICAL_SENSITIVE"),
+             "Module policy_engine.py kiểm tra quyền truy cập.", 0.64, "TECHNICAL_SENSITIVE"),
         ],
     ]
 
