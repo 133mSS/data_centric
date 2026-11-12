@@ -492,8 +492,10 @@ class DemoHandler(BaseHTTPRequestHandler):
         dlp_trace_decision = dlp_decision if dlp_executed else "NOT_RUN"
         trace = [
             {"stage": "Xác thực", "decision": "ALLOW", "detail": f"Danh tính {user['username']} đã được xác thực bằng token còn hiệu lực."},
-            {"stage": "ABAC / Retrieval", "decision": "ALLOW" if sources else "DENY",
-             "detail": f"{len(sources)} tài liệu trong Top-K sau lọc ABAC; {denied} lượt ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."},
+            {"stage": "ABAC / Retrieval",
+             "decision": "ALLOW" if sources else ("DENY" if denied > 0 else "NO_RESULT"),
+             "detail": (f"{len(sources)} tài liệu trong Top-K sau lọc ABAC; {denied} lượt ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."
+                        if sources or denied else "Không tìm thấy chunk phù hợp trong phạm vi truy cập; đây không phải quyết định từ chối quyền.")},
             {"stage": "Output DLP", "decision": dlp_trace_decision,
              "detail": (f"Ngữ cảnh phát hành cố định: {RELEASE_CONTEXT}. Số bản ghi match được audit: {dlp_matches}."
                         if dlp_executed else "Không có tài liệu được phép sau retrieval; Output DLP không được gọi trong request này.")},
