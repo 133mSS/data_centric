@@ -52,3 +52,24 @@ def test_mixed_indonesian_answer_is_repaired():
     assert "pada" not in result
     assert "yang" not in result
     assert mock_post.call_count == 2
+
+
+
+def test_mixed_language_after_repair_returns_safe_fallback():
+    first = Mock()
+    first.raise_for_status.return_value = None
+    first.json.return_value = {
+        "response": "Câu trả lời có pada và yang mendukung usaha."
+    }
+    second = Mock()
+    second.raise_for_status.return_value = None
+    second.json.return_value = {
+        "response": "Vẫn còn pada và yang mendukung usaha."
+    }
+    chunks = [
+        (1, 1, "Tài liệu thử nghiệm", "Nội bộ", None, "Nội dung thử nghiệm")
+    ]
+    with patch("app.llm.requests.post", side_effect=[first, second]) as mock_post:
+        result = generate_answer("Câu hỏi thử nghiệm", chunks)
+    assert result.startswith("Mô hình chưa tạo được câu trả lời tiếng Việt")
+    assert mock_post.call_count == 2
