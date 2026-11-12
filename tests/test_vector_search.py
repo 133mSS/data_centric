@@ -149,3 +149,38 @@ def test_failed_search_clears_stale_audit_metadata(monkeypatch):
         vs.vector_search(None, {"id": 1}, "test query")
 
     assert vs.get_last_denied_shadow_chunks() == []
+
+
+
+def test_title_exact_match_boosts_correct_document_without_bypassing_acl(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(
+        vs, "enforce_access",
+        lambda user, doc: MagicMock(effect="ALLOW"),
+    )
+    # Candidate order is vector-only order: unrelated document first.
+    cursor.fetchall.side_effect = [
+        [],  # Shadow baseline
+        [
+            (7, 11, "Thông báo bảo trì", "Nội bộ", "Kỹ thuật",
+             "Nội dung bảo trì", 0.67, "MAINTENANCE_NOTICE"),
+            (6, 10, "Mã nguồn hệ thống RAG", "Nội bộ", "Kỹ thuật",
+             "Module policy_engine.py kiểm tra quyền truy cập.", 0.614, "TECHNICAL_SENSITIVE"),
+        ],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1}, "Mã nguồn hệ thống RAG", top_k=1
+    )
+
+    assert denied == []
+    assert len(allowed) == 1
+    assert allowed[0][1] == 10
+    # The SQL candidate search still enforces the allow-list before LIMIT.
+    controlled_sql = cursor.execute.call_args_list[1].args[0]
+    normalized = " ".join(controlled_sql.split())
+    assert "WHERE c.document_id = ANY(%s)" in normalized
+    assert normalized.index("WHERE") < normalized.index("ORDER BY") < normalized.index("LIMIT")
