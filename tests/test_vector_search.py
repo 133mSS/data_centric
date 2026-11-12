@@ -40,7 +40,7 @@ def test_controlled_query_filters_acl_before_limit(monkeypatch):
 
     cursor.fetchall.side_effect = [
         [],  # Shadow baseline
-        [(1, 10, "Allowed doc", "INTERNAL", "IT", "content", 0.9)],
+        [(1, 10, "Allowed doc", "INTERNAL", "IT", "content", 0.9, "GENERAL_INTERNAL")],
     ]
 
     allowed, denied = vs.vector_search_with_audit(
