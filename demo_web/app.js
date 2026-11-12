@@ -146,11 +146,8 @@
   function renderTrace(data) {
     const trace=data.trace||[];
     const sourceRows=(data.sources||[]).map(source=>`<div class="trace-source-item"><b>#${esc(source.id)} · ${esc(source.title)}</b><small>${esc(source.classification)} · ${esc(source.department || 'Không gán phòng ban')} · ${esc(source.protection_profile)}</small></div>`).join('');
-    const sourceDetail=sourceRows ? `<details class="trace-sources"><summary>Tài liệu trong Top-K (${data.sources.length})</summary><div class="trace-source-list">${sourceRows}</div><p class="trace-source-note">Đây là các tài liệu được truy xuất sau lọc quyền trong lượt hỏi này; danh sách không khẳng định mô hình đã sử dụng mọi tài liệu để tạo câu trả lời.</p></details>` : '';
+    const sourceDetail=sourceRows ? `<details class="trace-sources"><summary>Tài liệu trong Top-K (${data.sources.length})</summary><div class="trace-source-list">${sourceRows}</div><p class="trace-source-note">Đây là tài liệu được truy xuất sau khi lọc quyền; không đồng nghĩa mô hình đã sử dụng tất cả tài liệu để tạo câu trả lời.</p></details>` : '';
     const traceContent = $('trace-content');
-    // The empty state uses display:flex for its centered placeholder. Remove
-    // that class after the first result so timeline, summary and source details
-    // stack vertically instead of being squeezed into side-by-side columns.
     traceContent.classList.remove('trace-empty');
     traceContent.classList.add('trace-populated');
     traceContent.innerHTML = `<div class="trace-list">${trace.map(t=>`<div class="trace-item ${esc(clsDecision(t.decision))}"><b>${esc(t.stage)} · ${esc(t.decision)}</b><small>${esc(t.detail)}</small></div>`).join('')}</div><div class="trace-summary"><b>Request ID</b><br><code>${esc(data.request_id)}</code><br><br><b>Release context</b>: ${esc(data.release_context)}<br><b>Retrieval</b>: ${data.retrieval?.allowed_chunks_logged || 0} lượt ALLOW · ${data.retrieval?.denied_candidate_occurrences || 0} lượt DENY bị loại<br><b>DLP audit events</b>: ${data.dlp_match_events || 0}</div>${sourceDetail}`;
