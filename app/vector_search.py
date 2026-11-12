@@ -136,15 +136,13 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         overlap = len(query_terms_folded & title_terms_folded)
         title_phrase = _strip_vietnamese_diacritics(title)
         query_phrase = _strip_vietnamese_diacritics(query.strip())
-        # Full-title queries and short distinctive title phrases are strong hints.
-        # Bound boosts so semantic similarity remains part of the ranking decision.
+        # Exact-title queries receive the strongest bounded signal. Short
+        # distinctive phrases such as "mã nguồn RAG" receive a smaller
+        # title-coverage boost without overwhelming vector similarity.
         exact_phrase = bool(query_phrase) and query_phrase in title_phrase
-        title_coverage = overlap / max(1, len(title_terms_folded))
-        lexical_boost = (
-            (0.12 if exact_phrase else 0.0)
-            + min(overlap, 4) * 0.012
-            + min(title_coverage, 1.0) * 0.025
-        )
+        title_coverage = overlap / max(1, len(query_terms_folded))
+        title_coverage = min(title_coverage, 1.0)
+        lexical_boost = (0.12 if exact_phrase else 0.0) + title_coverage * 0.04
         vector_similarity = float(row[6] or 0.0)
         ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
 
