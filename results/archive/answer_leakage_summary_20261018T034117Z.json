@@ -1,0 +1,60 @@
+{
+  "experiment": "answer_leakage_test",
+  "run_id_utc": "20261018T034117Z",
+  "total_cases": 30,
+  "allow_cases": 20,
+  "deny_cases": 10,
+  "baseline_leakage_rate_all_cases": 0.6,
+  "controlled_leakage_rate_all_cases": 0.0,
+  "baseline_denied_case_leakage_rate": 1.0,
+  "controlled_denied_case_leakage_rate": 0.0,
+  "baseline_answerability_rate_allowed": 1.0,
+  "controlled_answerability_rate_allowed": 1.0,
+  "target_retrieval_passes": 30,
+  "target_retrieval_failures": 0,
+  "public_entry_block_decisions": 0,
+  "controlled_output_dlp_decision_counts": {
+    "ALLOW": 21,
+    "REDACT": 9
+  },
+  "controlled_output_dlp_decision_counts_by_expected_access": {
+    "DENY": {
+      "ALLOW": 10,
+      "REDACT": 0
+    },
+    "ALLOW": {
+      "ALLOW": 11,
+      "REDACT": 9
+    }
+  },
+  "retrieval_metrics": {
+    "baseline_denied_target_hits": 10,
+    "controlled_denied_target_hits": 0,
+    "denied_case_count": 10,
+    "baseline_denied_target_hit_rate": 1.0,
+    "controlled_denied_target_hit_rate": 0.0,
+    "baseline_allowed_target_hits": 15,
+    "controlled_allowed_target_hits": 20,
+    "allowed_case_count": 20,
+    "baseline_allowed_target_hit_rate": 0.75,
+    "controlled_allowed_target_hit_rate": 1.0
+  },
+  "answerability_method": "fallback_phrase_proxy_not_semantic_evaluation",
+  "leak_detection_method": "case_insensitive_exact_substring_match; paraphrases_and_obfuscated_values_may_be_missed",
+  "cases_csv": "answer_leakage_cases_20261018T034117Z.csv",
+  "privacy_note": "Raw answers and sensitive fact strings are not persisted in result artifacts.",
+  "direct_output_dlp": {
+    "INTERNAL_ASSISTANT": {
+      "decision": "ALLOW",
+      "matched_fact_count": 4,
+      "leaked_fact_count": 3,
+      "check_pass": true
+    },
+    "SHARE_SUMMARY": {
+      "decision": "REDACT",
+      "matched_fact_count": 4,
+      "leaked_fact_count": 0,
+      "check_pass": true
+    }
+  }
+}

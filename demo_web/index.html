@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data-Centric RAG | Nhóm 11</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/trace-details.css">
+</head>
+<body>
+  <div id="login-view" class="login-shell">
+    <section class="login-brand">
+      <div class="brand-lockup"><span class="brand-mark">R</span><span>PTIT <b>·</b> NHÓM 11</span></div>
+      <div class="brand-copy">
+        <p class="eyebrow light">DATA-CENTRIC SECURITY LAB</p>
+        <h1>Bảo vệ dữ liệu<br>ngay trong luồng RAG.</h1>
+        <p class="brand-description">Demo hệ thống kiểm soát truy cập ABAC trước truy xuất và Output DLP trước khi phát hành câu trả lời.</p>
+        <div class="login-flow">
+          <span>IDENTITY</span><i></i><span>POLICY</span><i></i><span>RETRIEVAL</span><i></i><span>OUTPUT DLP</span>
+        </div>
+      </div>
+      <p class="brand-foot">BẢO MẬT DỮ LIỆU · PROJECT DEMONSTRATION</p>
+    </section>
+    <section class="login-panel">
+      <div class="login-card">
+        <div class="login-heading">
+          <p class="eyebrow">ĐĂNG NHẬP HỆ THỐNG</p>
+          <h2>Chào mừng trở lại</h2>
+          <p>Sử dụng tài khoản fixture đã được cấp trong môi trường lab.</p>
+        </div>
+        <form id="login-form" autocomplete="off">
+          <label for="username">Tên đăng nhập</label>
+          <input id="username" name="username" placeholder="Ví dụ: nv_dev" required autocomplete="username">
+          <label for="password">Mật khẩu demo</label>
+          <input id="password" name="password" type="password" placeholder="Nhập mật khẩu" required autocomplete="current-password">
+          <label for="otp">Mã xác thực TOTP</label>
+          <input id="otp" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required>
+          <button class="button button-primary button-wide" type="submit"><span>Đăng nhập an toàn</span><span aria-hidden="true">→</span></button>
+          <p id="login-error" class="form-error" role="alert"></p>
+        </form>
+        <div class="login-note"><span class="note-icon">i</span><p>Mật khẩu và OTP được gửi tới backend local để xác thực bằng bcrypt + TOTP. Token chỉ được giữ trong phiên tab hiện tại.</p></div>
+        <div class="login-users"><span>TÀI KHOẢN DEMO</span><div><code>nv_dev</code><code>mgr_tech</code><code>mgr_sales</code><code>partner_01</code><code>ceo_boss</code></div></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="app-view" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span class="brand-mark small">R</span><div><b>RAG SECURITY</b><small>PTIT · NHÓM 11</small></div></div>
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="Điều hướng chính">
+        <button class="nav-item active" data-page="overview"><span class="nav-icon">▦</span>Tổng quan</button>
+        <button class="nav-item" data-page="chat"><span class="nav-icon">◌</span>Hỏi đáp RAG</button>
+        <button class="nav-item" data-page="documents"><span class="nav-icon">▤</span>Tài liệu được phép</button>
+        <button class="nav-item" data-page="audit"><span class="nav-icon">≋</span>Nhật ký kiểm soát</button>
+        <button class="nav-item" data-page="experiments"><span class="nav-icon">▥</span>Kết quả thực nghiệm</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="side-project"><span class="status-dot"></span><div><b>Local lab</b><small>Controlled RAG · v1</small></div></div>
+        <button id="logout-btn" class="logout-btn">↪ Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div><span class="top-eyebrow">DATA-CENTRIC SECURITY</span><h1 id="page-title">Tổng quan hệ thống</h1></div>
+        <div class="topbar-right"><div id="system-status" class="system-status"><span class="status-dot"></span>Đang kiểm tra dịch vụ</div><div class="user-chip"><span id="avatar" class="avatar">U</span><div><b id="user-name">user</b><small id="user-role">role</small></div></div></div>
+      </header>
+
+      <section id="page-overview" class="page active">
+        <div class="page-intro"><div><p class="eyebrow">SYSTEM OVERVIEW</p><h2>Trạng thái kiểm soát dữ liệu</h2><p>Thông tin được tải từ PostgreSQL và các module hiện có trong project.</p></div><button class="button button-secondary" id="refresh-overview">↻ Làm mới dữ liệu</button></div>
+        <div id="service-grid" class="service-grid">
+          <div class="service-card"><span class="service-name">PostgreSQL</span><b id="db-service">Đang kiểm tra</b><small id="db-detail">Application database</small></div>
+          <div class="service-card"><span class="service-name">Ollama · Qwen2.5:3b</span><b id="llm-service">Đang kiểm tra</b><small>LLM generation</small></div>
+          <div class="service-card"><span class="service-name">Ollama · nomic-embed-text</span><b id="embed-service">Đang kiểm tra</b><small>Query embeddings</small></div>
+          <div class="service-card"><span class="service-name">Embedding trong PostgreSQL</span><b id="vector-service">Đang kiểm tra</b><small id="vector-detail">Chunks có vector</small></div>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card"><span>Tài liệu được phép đọc</span><strong id="metric-documents">—</strong><small>Theo policy của tài khoản hiện tại</small></article>
+          <article class="metric-card"><span>Chunks thuộc phạm vi</span><strong id="metric-chunks">—</strong><small>Trong các tài liệu được phép</small></article>
+          <article class="metric-card"><span>Clearance hiện tại</span><strong id="metric-clearance">—</strong><small id="metric-clearance-sub">Mức truy cập theo vai trò</small></article>
+          <article class="metric-card"><span>Audit events · 24 giờ</span><strong id="metric-audit">—</strong><small>Chỉ sự kiện của tài khoản hiện tại</small></article>
+        </div>
+        <div class="overview-columns">
+          <article class="panel classification-panel"><div class="panel-heading"><div><p class="eyebrow">ACCESS SCOPE</p><h3>Phân loại tài liệu được phép</h3></div><span class="panel-tag">ABAC / PDP</span></div><div id="classification-bars" class="classification-bars"><p class="empty-state">Đang tải phạm vi truy cập…</p></div></article>
+          <article class="panel policy-panel"><div class="panel-heading"><div><p class="eyebrow">POLICY FLOW</p><h3>Hai ranh giới bảo vệ</h3></div></div><div class="policy-steps"><div class="policy-step"><span>01</span><div><b>ABAC trước Retrieval</b><small>Lọc tài liệu theo role, clearance và department.</small></div></div><div class="policy-step"><span>02</span><div><b>Output DLP trước phát hành</b><small>ALLOW, REDACT hoặc BLOCK theo SHARE_SUMMARY.</small></div></div><div class="policy-step"><span>03</span><div><b>Audit Log</b><small>Ghi nhận quyết định ở retrieval và output_dlp.</small></div></div></div></article>
+        </div>
+        <div id="fixture-warning" class="notice notice-warning hidden"></div>
+      </section>
+
+      <section id="page-chat" class="page">
+        <div class="page-intro"><div><p class="eyebrow">CONTROLLED RAG</p><h2>Hỏi đáp trên tài liệu được phép</h2><p>Câu hỏi được xử lý qua backend Controlled RAG; giao diện không tự chọn release context.</p></div><span class="context-lock">🔒 SHARE_SUMMARY · TRUSTED BACKEND</span></div>
+        <div class="chat-policy-note"><b>Lưu ý:</b> DLP · ALLOW chỉ có nghĩa câu trả lời được phép phát hành theo policy; không xác nhận câu trả lời đúng hoặc đủ căn cứ từ tài liệu.</div>
+        <div class="chat-layout">
+          <section class="panel chat-panel">
+            <div class="chat-toolbar"><div><b>RAG Assistant</b><small>Qwen2.5:3b · top-k = 3</small></div><span class="live-label"><i></i> LOCAL</span></div>
+            <div id="chat-messages" class="chat-messages"><div class="assistant-message"><span class="message-mark">R</span><div><b>Xin chào!</b><p>Hãy đặt câu hỏi về tài liệu. Hệ thống sẽ kiểm tra quyền truy cập trước khi tìm kiếm và áp dụng Output DLP trước khi trả lời.</p><div class="suggestions"><button data-query="Quy trình xin nghỉ phép như thế nào?">Quy trình nghỉ phép</button><button data-query="Thông tin tuyển dụng Data Engineering?">Tuyển dụng Data Engineering</button><button data-query="Kế hoạch sáp nhập với công ty XYZ là gì?">Kế hoạch sáp nhập</button></div></div></div></div>
+            <form id="chat-form" class="chat-composer"><textarea id="chat-query" rows="2" maxlength="800" placeholder="Nhập câu hỏi của bạn…" required></textarea><div class="composer-footer"><span>Không nhập dữ liệu nhạy cảm thật trong môi trường demo.</span><button type="submit" class="button button-primary" id="send-btn">Gửi câu hỏi <span>→</span></button></div></form>
+          </section>
+          <aside class="panel trace-panel"><div class="panel-heading"><div><p class="eyebrow">SECURITY TRACE</p><h3>Luồng kiểm soát</h3></div><span class="panel-tag">PER REQUEST</span></div><div id="trace-content" class="trace-empty">Kết quả kiểm soát sẽ hiển thị tại đây sau mỗi câu hỏi.</div></aside>
+        </div>
+      </section>
+
+      <section id="page-documents" class="page">
+        <div class="page-intro"><div><p class="eyebrow">AUTHORIZED DATA</p><h2>Tài liệu được phép truy cập</h2><p>Danh sách chỉ gồm tài liệu mà PDP trả về ALLOW cho tài khoản đang đăng nhập.</p></div><span class="panel-tag">FILTERED BY PDP</span></div>
+        <div class="panel table-panel"><div class="table-toolbar"><b id="documents-count">Tài liệu</b><input id="document-filter" class="table-search" placeholder="Tìm theo tên tài liệu…"></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Tên tài liệu</th><th>Phân loại</th><th>Phòng ban</th><th>Protection Profile</th><th>Chunks</th></tr></thead><tbody id="documents-body"><tr><td colspan="6" class="empty-state">Đang tải…</td></tr></tbody></table></div></div>
+      </section>
+
+      <section id="page-audit" class="page">
+        <div class="page-intro"><div><p class="eyebrow">AUDIT TRAIL</p><h2>Nhật ký kiểm soát truy cập</h2><p>Theo dõi các quyết định retrieval và output DLP của tài khoản hiện tại.</p></div><button class="button button-secondary" id="refresh-audit">↻ Làm mới</button></div>
+        <div class="notice notice-neutral">Vì mục đích tối thiểu hóa dữ liệu, giao diện không hiển thị query_text, raw answer, OTP hoặc giá trị fact nhạy cảm.</div>
+        <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Giai đoạn</th><th>Quyết định</th><th>Lý do</th><th>Policy / Rule</th><th>Release context</th></tr></thead><tbody id="audit-body"><tr><td colspan="6" class="empty-state">Đang tải…</td></tr></tbody></table></div></div>
+      </section>
+
+      <section id="page-experiments" class="page">
+        <div class="page-intro"><div><p class="eyebrow">EXPERIMENT RESULTS</p><h2>Kết quả thực nghiệm của project</h2><p>Số liệu được đọc từ JSON/CSV trong thư mục results, không phải dữ liệu tự tạo ở giao diện.</p></div><span class="panel-tag">LOCAL ARTIFACTS</span></div>
+        <div id="experiment-kpis" class="metric-grid experiment-kpis"><div class="metric-card"><span>WP6 ACL Matrix</span><strong>—</strong><small>Loading…</small></div></div>
+        <div class="experiment-grid">
+          <article class="panel experiment-panel"><div class="panel-heading"><div><p class="eyebrow">WP7 · ANSWER LEAKAGE</p><h3>Rò rỉ câu trả lời</h3></div></div><div id="leakage-chart" class="comparison-chart"></div><p id="leakage-note" class="chart-note"></p></article>
+          <article class="panel experiment-panel"><div class="panel-heading"><div><p class="eyebrow">WP7 · PROMPT INJECTION</p><h3>Attack Success Rate</h3></div></div><div id="injection-chart" class="comparison-chart"></div><p id="injection-note" class="chart-note"></p></article>
+          <article class="panel experiment-panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">WP8 · ABLATION</p><h3>Đóng góp của ABAC và DLP</h3></div><small>36 case-runs / cấu hình</small></div><div class="table-wrap"><table><thead><tr><th>Cấu hình</th><th>Target retrieval leaks</th><th>Leaked facts</th><th>Redact</th></tr></thead><tbody id="ablation-body"><tr><td colspan="4" class="empty-state">Đang tải…</td></tr></tbody></table></div><p class="chart-note">4 cấu hình × 12 ca × 3 lần lặp = 144 calls. Các lần lặp dùng lại bộ test case, không phải mẫu độc lập.</p></article>
+          <article class="panel experiment-panel wide-panel"><div class="panel-heading"><div><p class="eyebrow">BENCHMARK V1</p><h3>Quy mô dữ liệu và độ trễ truy xuất</h3></div><small id="benchmark-total">—</small></div><div id="benchmark-chart" class="latency-chart"></div><p class="chart-note">Đo retrieval; không bao gồm thời gian LLM generation. Semantic review của benchmark chưa hoàn tất.</p></article>
+        </div>
+        <div class="notice notice-neutral">Các tỷ lệ leakage/ASR phụ thuộc detector và bộ test hiện tại. 0% quan sát được không đồng nghĩa hệ thống miễn nhiễm với mọi hình thức rò rỉ hoặc prompt injection.</div>
+      </section>
+
+      <footer class="app-footer"><span>PTIT · NHÓM 11 · DATA-CENTRIC SECURITY FOR RAG</span><span>LOCAL DEMONSTRATION · NOT A PRODUCTION SECURITY CERTIFICATION</span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+﻿seed,username,role,user_department,document_id,classification,document_department,expected,actual,pass
+4206,bench_partner,Đối tác,NULL,3065,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,14713,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,15933,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,13613,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,4677,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,7941,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,12665,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,14317,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,11717,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,8885,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_partner,Đối tác,NULL,7222,Nội bộ,Toàn công ty,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,11046,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,12022,Nội bộ,NULL,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,11138,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,766,Nội bộ,NULL,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,1022,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,7250,Nội bộ,Toàn công ty,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,2970,Nội bộ,NULL,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,6258,Nội bộ,Toàn công ty,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,242,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,4499,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,14459,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,4307,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,667,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,15795,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,9159,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,963,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,7383,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,6615,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,13331,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,2272,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,5912,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,5044,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,11516,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,2148,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,3556,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,12440,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,2992,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,6184,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_partner,Đối tác,NULL,13620,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,2857,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,2977,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,14589,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,9205,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,369,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,8249,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,7481,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,14133,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,3569,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,7013,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,15790,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,14298,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,11694,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,7594,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,12814,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,11726,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,1882,Nội bộ,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,14002,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,3298,Nội bộ,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,10866,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,15007,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,8171,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,2543,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,6959,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,7727,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,4463,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,13019,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,143,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,11927,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,11271,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,12736,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,12368,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,1908,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,13620,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,12672,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,7524,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,548,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,152,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,2060,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_tech,Nhân viên,Kỹ thuật,5104,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,8205,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,1301,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,7389,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,2305,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,1969,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,5905,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,13125,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,1849,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,8357,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,7449,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,2634,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,6830,Nội bộ,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,11022,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,3358,Nội bộ,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,3450,Nội bộ,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,12450,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,14358,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,13842,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,1902,Nội bộ,NULL,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,3066,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,3467,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,1819,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,13119,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,2899,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,14823,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,11015,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,6871,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,9563,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,11279,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,15419,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,4076,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,15544,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,3860,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,15716,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,7804,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,12688,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,7884,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,12236,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,4776,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_employee_sales,Nhân viên,Kinh doanh,15000,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,9277,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,12889,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,11553,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,9225,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,1737,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,15305,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,8445,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,481,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,13821,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,9785,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,7954,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,13986,Nội bộ,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,4298,Nội bộ,NULL,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,15242,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,3374,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,7474,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,1930,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,5098,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,5786,Nội bộ,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,13922,Nội bộ,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,12519,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,13103,Mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,5731,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,15047,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,8975,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,8987,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,9575,Mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,1499,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,11863,Mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_manager_tech,Manager,Kỹ thuật,8859,Mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,14360,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,13824,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,3072,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,4248,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,196,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,14632,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,6988,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,2696,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,15484,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_manager_tech,Manager,Kỹ thuật,15760,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,15745,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,3921,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,11225,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,4093,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,6905,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,9113,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,13113,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,13953,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,9365,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,1393,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,6718,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,6062,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,9926,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,11518,Nội bộ,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,12130,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,3726,Nội bộ,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,14066,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,3454,Nội bộ,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,710,Nội bộ,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,10134,Nội bộ,NULL,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,4403,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,12119,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,12967,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,5235,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,5807,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,251,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,3023,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,827,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,2263,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_manager_sales,Manager,Kinh doanh,15107,Mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,8512,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,6452,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,12100,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,5816,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,12156,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,11080,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,2228,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,5208,Tối mật,Toàn công ty,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,4592,Tối mật,Kinh doanh,DENY,DENY,True
+4206,bench_manager_sales,Manager,Kinh doanh,12268,Tối mật,Kỹ thuật,DENY,DENY,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,7085,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,13673,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,3461,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,15245,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,5817,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,6957,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,13669,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,13637,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,2161,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,8825,Công khai,NULL,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,5802,Nội bộ,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,10254,Nội bộ,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,15698,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,15062,Nội bộ,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,10810,Nội bộ,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,13578,Nội bộ,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,14294,Nội bộ,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,14106,Nội bộ,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,8582,Nội bộ,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,2594,Nội bộ,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,6391,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,6079,Mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,14275,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,6835,Mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,1803,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,14095,Mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,9731,Mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,13283,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,4615,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,3195,Mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,7100,Tối mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,8348,Tối mật,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,9836,Tối mật,Toàn công ty,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,3536,Tối mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,14540,Tối mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,5556,Tối mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,10444,Tối mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,7952,Tối mật,Kinh doanh,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,12460,Tối mật,Kỹ thuật,ALLOW,ALLOW,True
+4206,bench_leadership,Ban lãnh đạo,Toàn công ty,3148,Tối mật,Toàn công ty,ALLOW,ALLOW,True

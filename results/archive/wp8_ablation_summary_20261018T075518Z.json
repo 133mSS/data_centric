@@ -1,0 +1,82 @@
+{
+  "run_id": "20261018T075518Z",
+  "status": "COMPLETED",
+  "repeats": 3,
+  "cases_per_configuration_per_repeat": 12,
+  "configurations": [
+    "Baseline",
+    "ABAC only",
+    "ABAC+DLP",
+    "DLP only (ABAC off)"
+  ],
+  "metrics": [
+    {
+      "configuration": "Baseline",
+      "repeats": 3,
+      "cases": 36,
+      "target_retrieval_leaks": 12,
+      "leaked_fact_count": 48,
+      "redact_count": 0,
+      "block_count": 0,
+      "harmless_over_redaction_count": 0,
+      "harmless_over_redaction_rate": 0.0,
+      "answerable_rate": 0.8333,
+      "mean_latency_ms": 5203.47,
+      "latency_overhead_vs_baseline_pct": 0.0
+    },
+    {
+      "configuration": "ABAC only",
+      "repeats": 3,
+      "cases": 36,
+      "target_retrieval_leaks": 0,
+      "leaked_fact_count": 27,
+      "redact_count": 0,
+      "block_count": 0,
+      "harmless_over_redaction_count": 0,
+      "harmless_over_redaction_rate": 0.0,
+      "answerable_rate": 0.6667,
+      "mean_latency_ms": 4900.8,
+      "latency_overhead_vs_baseline_pct": -5.82
+    },
+    {
+      "configuration": "ABAC+DLP",
+      "repeats": 3,
+      "cases": 36,
+      "target_retrieval_leaks": 0,
+      "leaked_fact_count": 0,
+      "redact_count": 9,
+      "block_count": 0,
+      "harmless_over_redaction_count": 0,
+      "harmless_over_redaction_rate": 0.0,
+      "answerable_rate": 0.6667,
+      "mean_latency_ms": 4907.08,
+      "latency_overhead_vs_baseline_pct": -5.7
+    },
+    {
+      "configuration": "DLP only (ABAC off)",
+      "repeats": 3,
+      "cases": 36,
+      "target_retrieval_leaks": 12,
+      "leaked_fact_count": 0,
+      "redact_count": 12,
+      "block_count": 21,
+      "harmless_over_redaction_count": 12,
+      "harmless_over_redaction_rate": 0.8,
+      "answerable_rate": 0.3333,
+      "mean_latency_ms": 4930.68,
+      "latency_overhead_vs_baseline_pct": -5.24
+    }
+  ],
+  "methodology": {
+    "same_queries_and_top_k": true,
+    "abac_enforced_before_llm": true,
+    "production_entry_points_modified": false,
+    "leaked_fact_count": "Post-release answer checked by the same configured detector for all arms; exact/structured matching only, may miss paraphrases and obfuscation.",
+    "answerable_rate": "Heuristic based on non-empty output and known refusal/error phrases; not semantic evaluation.",
+    "over_redaction": "Harmless control counted when DLP decision is REDACT or BLOCK.",
+    "retrieval_leak": "Target document marked DENY is present in retrieved document IDs."
+  },
+  "artifacts": {
+    "cases_csv": "wp8_ablation_cases_20261018T075518Z.csv"
+  }
+}

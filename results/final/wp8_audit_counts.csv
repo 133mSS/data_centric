@@ -1,0 +1,4 @@
+﻿stage,decision,event_count
+output_dlp,REDACT,180
+retrieval,ALLOW,673
+retrieval,DENY,347

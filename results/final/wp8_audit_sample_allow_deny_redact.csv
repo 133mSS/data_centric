@@ -1,0 +1,10 @@
+﻿request_id,created_at,stage,decision,reason,rule_id,document_id,chunk_id
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,retrieval,ALLOW,allowed,acl_policy,1,1
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,retrieval,ALLOW,allowed,acl_policy,5,5
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,retrieval,ALLOW,allowed,acl_policy,2,2
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,retrieval,DENY,policy_violation,acl_policy,3,3
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,retrieval,DENY,policy_violation,acl_policy,4,4
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,output_dlp,REDACT,sensitive_match,match:quantity:start=79:end=92,,
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,output_dlp,REDACT,sensitive_match,match:named_entity:start=97:end=111,,
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,output_dlp,REDACT,sensitive_match,match:year:start=118:end=126,,
+6c7d5d9c-645d-4f51-be28-8fe0b0662dcd,2026-10-18T05:16:35.527805+00:00,output_dlp,REDACT,sensitive_match,match:money:start=157:end=170,,

@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.log
+
+# Superseded local backups and generated benchmark exports
+*.bak
+results/benchmark_v1/

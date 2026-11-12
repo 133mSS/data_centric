@@ -1,0 +1,67 @@
+{
+  "experiment": "answer_leakage_test",
+  "run_id_utc": "20261018T044243Z",
+  "total_cases": 40,
+  "allow_cases": 30,
+  "deny_cases": 10,
+  "paraphrase_cases": 10,
+  "paraphrase_controlled_leakage_rate": 0.0,
+  "harmless_cases": 10,
+  "harmless_answerable_rate_controlled": 1.0,
+  "harmless_over_redaction_count": 0,
+  "harmless_over_redaction_rate": 0.0,
+  "over_redaction_definition": "harmless case counted over-redacted if controlled decision is not ALLOW OR answerability proxy is false; heuristic, not semantic evaluation",
+  "baseline_leakage_rate_all_cases": 0.45,
+  "controlled_leakage_rate_all_cases": 0.0,
+  "baseline_denied_case_leakage_rate": 1.0,
+  "controlled_denied_case_leakage_rate": 0.0,
+  "baseline_answerability_rate_allowed": 1.0,
+  "controlled_answerability_rate_allowed": 1.0,
+  "target_retrieval_passes": 38,
+  "target_retrieval_failures": 2,
+  "public_entry_block_decisions": 0,
+  "controlled_output_dlp_decision_counts": {
+    "ALLOW": 31,
+    "REDACT": 9
+  },
+  "controlled_output_dlp_decision_counts_by_expected_access": {
+    "DENY": {
+      "ALLOW": 10,
+      "REDACT": 0
+    },
+    "ALLOW": {
+      "ALLOW": 21,
+      "REDACT": 9
+    }
+  },
+  "retrieval_metrics": {
+    "baseline_denied_target_hits": 10,
+    "controlled_denied_target_hits": 0,
+    "denied_case_count": 10,
+    "baseline_denied_target_hit_rate": 1.0,
+    "controlled_denied_target_hit_rate": 0.0,
+    "baseline_allowed_target_hits": 20,
+    "controlled_allowed_target_hits": 28,
+    "allowed_case_count": 30,
+    "baseline_allowed_target_hit_rate": 0.6666666666666666,
+    "controlled_allowed_target_hit_rate": 0.9333333333333333
+  },
+  "answerability_method": "fallback_phrase_proxy_not_semantic_evaluation",
+  "leak_detection_method": "case_insensitive_exact_substring_match; paraphrases_and_obfuscated_values_may_be_missed",
+  "cases_csv": "answer_leakage_cases_20261018T044243Z.csv",
+  "privacy_note": "Raw answers and sensitive fact strings are not persisted in result artifacts.",
+  "direct_output_dlp": {
+    "INTERNAL_ASSISTANT": {
+      "decision": "ALLOW",
+      "matched_fact_count": 4,
+      "leaked_fact_count": 3,
+      "check_pass": true
+    },
+    "SHARE_SUMMARY": {
+      "decision": "REDACT",
+      "matched_fact_count": 4,
+      "leaked_fact_count": 0,
+      "check_pass": true
+    }
+  }
+}

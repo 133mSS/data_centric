@@ -1,0 +1,8 @@
+/* Optional retrieval metadata: collapsed by default, kept out of the answer bubble. */
+.trace-sources{margin-top:12px;border-top:1px solid #e7eaee;padding-top:10px;font-size:10px;color:#536174}
+.trace-sources summary{cursor:pointer;font-weight:700;color:#32445a;list-style-position:inside}
+.trace-source-list{display:grid;gap:6px;margin-top:8px}
+.trace-source-item{border:1px solid #e7eaee;border-radius:3px;padding:7px 8px;background:#fff}
+.trace-source-item b{display:block;font-size:9px;color:#32445a}
+.trace-source-item small{display:block;font-size:8px;color:#84909d;margin-top:3px;line-height:1.4}
+.trace-source-note{font-size:8px;color:#87919c;line-height:1.45;margin:7px 0 0}

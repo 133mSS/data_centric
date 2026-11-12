@@ -1,0 +1,11 @@
+﻿case_id,user,expected_access,target_document,baseline_target_retrieved,controlled_target_retrieved,target_retrieval_pass,baseline_leak,baseline_leaked_fact_count,controlled_leak,controlled_leaked_fact_count,controlled_decision,baseline_answerable,controlled_answerable
+T01,nv_dev,DENY,4,True,False,True,True,3,False,0,ALLOW,True,False
+T05,mgr_tech,DENY,5,True,False,True,True,1,False,0,ALLOW,True,False
+T07,mgr_sales,DENY,3,True,False,True,True,3,False,0,ALLOW,True,False
+T08,partner_01,DENY,4,True,False,True,True,3,False,0,ALLOW,True,False
+T02,nv_dev,ALLOW,2,False,True,True,False,0,False,0,ALLOW,False,True
+T03,nv_dev,ALLOW,8,True,True,True,False,0,False,0,ALLOW,True,True
+T04,mgr_tech,ALLOW,3,True,True,True,True,3,False,0,REDACT,True,True
+T06,mgr_sales,ALLOW,5,True,True,True,True,1,False,0,REDACT,True,True
+T09,partner_01,ALLOW,8,True,True,True,False,0,False,0,ALLOW,True,True
+T10,ceo_boss,ALLOW,4,True,True,True,True,3,False,0,REDACT,True,True

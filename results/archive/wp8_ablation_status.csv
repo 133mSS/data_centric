@@ -1,0 +1,5 @@
+﻿configuration,fact_leaked,redact_count,block_count,harmless_over_redaction,answerable_rate,evidence
+Baseline,48,0,0,0.0,0.8333,wp8_ablation_summary_20261018T075518Z.json
+ABAC only,27,0,0,0.0,0.6667,wp8_ablation_summary_20261018T075518Z.json
+ABAC+DLP,0,9,0,0.0,0.6667,wp8_ablation_summary_20261018T075518Z.json
+DLP only (ABAC off),0,12,21,0.8,0.3333,wp8_ablation_summary_20261018T075518Z.json

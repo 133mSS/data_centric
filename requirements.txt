@@ -1,0 +1,4 @@
+bcrypt>=4.1,<6
+pyotp>=2.9,<3
+psycopg2-binary>=2.9,<3
+requests>=2.31
