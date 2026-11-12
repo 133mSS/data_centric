@@ -184,3 +184,28 @@ def test_title_exact_match_boosts_correct_document_without_bypassing_acl(monkeyp
     normalized = " ".join(controlled_sql.split())
     assert "WHERE c.document_id = ANY(%s)" in normalized
     assert normalized.index("WHERE") < normalized.index("ORDER BY") < normalized.index("LIMIT")
+
+
+
+def test_short_title_phrase_receives_title_coverage_boost(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+    cursor.fetchall.side_effect = [
+        [],
+        [
+            (7, 11, "Thông báo bảo trì", "Nội bộ", "Kỹ thuật",
+             "Nội dung bảo trì", 0.68, "MAINTENANCE_NOTICE"),
+            (6, 10, "Mã nguồn hệ thống RAG", "Nội bộ", "Kỹ thuật",
+             "Module policy_engine.py kiểm tra quyền truy cập.", 0.65, "TECHNICAL_SENSITIVE"),
+        ],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1}, "Mã nguồn RAG", top_k=1
+    )
+
+    assert denied == []
+    assert allowed[0][1] == 10
