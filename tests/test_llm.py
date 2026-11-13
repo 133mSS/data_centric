@@ -138,3 +138,31 @@ def test_chinese_script_after_repair_returns_safe_vietnamese_fallback():
 
     assert result.startswith("Mô hình chưa tạo được câu trả lời tiếng Việt")
     assert mock_post.call_count == 2
+
+
+
+def test_false_no_result_for_found_record_uses_grounded_extractive_fallback():
+    first = Mock()
+    first.raise_for_status.return_value = None
+    first.json.return_value = {
+        "response": "Tôi không tìm thấy thông tin về hồ sơ 00006."
+    }
+    repaired = Mock()
+    repaired.raise_for_status.return_value = None
+    repaired.json.return_value = {
+        "response": "Tôi vẫn không tìm thấy thông tin về hồ sơ 00006."
+    }
+    chunks = [
+        (1, 6, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật",
+         "Hồ sơ DOC-1000-00006: Access Service đang giám sát dịch vụ. "
+         "Nhóm phụ trách là an toàn thông tin; trạng thái hiện tại: đang triển khai.",
+         0.9, "GENERAL_INTERNAL")
+    ]
+    with patch("app.llm.requests.post", side_effect=[first, repaired]) as mock_post:
+        result = generate_answer("Tìm thông tin về hồ sơ 00006", chunks)
+
+    assert result.startswith("Tìm thấy tài liệu khớp mã hồ sơ 00006.")
+    assert "Access Service — Giám sát dịch vụ — hồ sơ 00006" in result
+    assert "đang giám sát dịch vụ" in result
+    assert mock_post.call_count == 2
