@@ -324,7 +324,7 @@ class TestControlledRAG(unittest.TestCase):
         }
         with (
             patch("controlled_rag.psycopg2.connect") as connect,
-            patch("controlled_rag.get_db_config", return_value={}),
+            patch("controlled_rag.get_demo_db_config", return_value={}),
             patch("controlled_rag.user_from_token", return_value=user) as verify,
             patch("controlled_rag.vector_search", return_value=chunks),
             patch("controlled_rag.get_last_denied_shadow_chunks", return_value=[]),
@@ -354,7 +354,7 @@ class TestControlledRAG(unittest.TestCase):
         user = {"id": 1, "username": "nv_dev", "role": "Nhân viên", "department": "Kỹ thuật"}
         with (
             patch("controlled_rag.psycopg2.connect") as connect,
-            patch("controlled_rag.get_db_config", return_value={}),
+            patch("controlled_rag.get_demo_db_config", return_value={}),
             patch("controlled_rag.user_from_token", return_value=user),
             patch("controlled_rag.vector_search", return_value=[]),
             patch("controlled_rag.get_last_denied_shadow_chunks", return_value=[]),
