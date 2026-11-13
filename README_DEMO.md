@@ -111,6 +111,6 @@ python .\scripts\seed_demo_users.py
 
 User PostgreSQL cần quyền CREATEDB để script tự tạo database. Nếu không có quyền đó, tạo database rỗng `baomatdulieu_demo` bằng tài khoản quản trị rồi chạy lại script. Script kiểm tra đúng nguồn/đích, chỉ copy documents/chunks/embeddings theo batch, tạo HNSW index và không copy benchmark users, MFA, audit, query cases hoặc kết quả thí nghiệm. Không có thao tác DROP/TRUNCATE.
 
-Sau đó chạy ` .\scripts\start_demo.ps1`. Demo server và `answer_internal_query()` đều bị pin vào `baomatdulieu_demo`. Danh mục tài liệu được tìm kiếm/phân trang ở backend (50 tài liệu/trang, tối đa 100) để tránh đẩy toàn bộ 16.000 dòng vào trình duyệt.
+Sau đó chạy `.\scripts\start_demo.ps1`. Demo server và `answer_internal_query()` đều bị pin vào `baomatdulieu_demo`. Danh mục tài liệu được tìm kiếm/phân trang ở backend (50 tài liệu/trang, tối đa 100) để tránh đẩy toàn bộ 16.000 dòng vào trình duyệt.
 
 Các test policy hiện có vẫn dùng `baomatdulieu`; retrieval integration tests vẫn chỉ đọc `baomatdulieu_benchmark`; Demo runtime dùng `baomatdulieu_demo`.
