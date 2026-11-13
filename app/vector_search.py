@@ -146,7 +146,7 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     # lookup. This is important for explicit document IDs/titles, which may be
     # absent from the first approximate-nearest-neighbour window. It never
     # searches outside the allow-list returned by PDP.
-    reference_ids = re.findall(r"(?<!\d)\d{3,}(?!\d)", query)
+    reference_ids = re.findall(r"(?<!\d)\d{5,}(?!\d)", query)
     title_candidates = []
     if reference_ids and title_search_terms:
         title_conditions = " AND ".join(
