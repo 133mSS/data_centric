@@ -308,14 +308,14 @@ class TestControlledRAG(unittest.TestCase):
         fake_conn.close.assert_called_once()
 
     def test_internal_user_context_is_passed_to_output_dlp(self):
-        from controlled_rag import _answer_query_with_connection
+        from controlled_rag import answer_internal_query
 
         fake_conn = MagicMock()
+        user = {"id": 1, "username": "nv_dev", "role": "Nhân viên", "department": "Kỹ thuật"}
         chunks = [
             (10, 6, "Mã nguồn hệ thống RAG", "Nội bộ", "Kỹ thuật",
              "Module policy_engine.py kiểm tra quyền truy cập.", 0.91, "TECHNICAL_SENSITIVE")
         ]
-        user = {"id": 1, "username": "nv_dev", "role": "Nhân viên", "department": "Kỹ thuật"}
         dlp_result = {
             "decision": "ALLOW",
             "answer": "Module policy_engine.py kiểm tra quyền truy cập.",
@@ -323,7 +323,9 @@ class TestControlledRAG(unittest.TestCase):
             "matched_count": 0,
         }
         with (
-            patch("controlled_rag.user_from_token", return_value=user),
+            patch("controlled_rag.psycopg2.connect") as connect,
+            patch("controlled_rag.get_db_config", return_value={}),
+            patch("controlled_rag.user_from_token", return_value=user) as verify,
             patch("controlled_rag.vector_search", return_value=chunks),
             patch("controlled_rag.get_last_denied_shadow_chunks", return_value=[]),
             patch("controlled_rag.generate_answer", return_value=dlp_result["answer"]),
@@ -333,8 +335,10 @@ class TestControlledRAG(unittest.TestCase):
             patch("controlled_rag.process_output_safely", return_value=dlp_result) as dlp,
             patch("controlled_rag.log_decision") as audit,
         ):
-            result = _answer_query_with_connection(fake_conn, "signed-token", "Mã nguồn hệ thống RAG")
+            connect.return_value.__enter__.return_value = fake_conn
+            result = answer_internal_query("signed-token", "Mã nguồn hệ thống RAG")
 
+        verify.assert_called_once_with(fake_conn, "signed-token")
         assert result["decision"] == "ALLOW"
         assert result["release_context"] == "INTERNAL_ASSISTANT"
         assert result["output_dlp_executed"] is True
@@ -344,18 +348,21 @@ class TestControlledRAG(unittest.TestCase):
 
 
     def test_empty_retrieval_returns_no_result_without_running_dlp(self):
-        from controlled_rag import _answer_query_with_connection
+        from controlled_rag import answer_internal_query
 
         fake_conn = MagicMock()
         user = {"id": 1, "username": "nv_dev", "role": "Nhân viên", "department": "Kỹ thuật"}
         with (
+            patch("controlled_rag.psycopg2.connect") as connect,
+            patch("controlled_rag.get_db_config", return_value={}),
             patch("controlled_rag.user_from_token", return_value=user),
             patch("controlled_rag.vector_search", return_value=[]),
             patch("controlled_rag.get_last_denied_shadow_chunks", return_value=[]),
             patch("controlled_rag.process_output_safely") as dlp,
             patch("controlled_rag.log_decision") as audit,
         ):
-            result = _answer_query_with_connection(fake_conn, "signed-token", "Một câu hỏi không có tài liệu")
+            connect.return_value.__enter__.return_value = fake_conn
+            result = answer_internal_query("signed-token", "Một câu hỏi không có tài liệu")
 
         assert result["decision"] == "NO_RESULT"
         assert result["output_dlp_executed"] is False
@@ -363,6 +370,8 @@ class TestControlledRAG(unittest.TestCase):
         dlp.assert_not_called()
         audit.assert_not_called()
         fake_conn.commit.assert_called_once()
+        fake_conn.close.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
