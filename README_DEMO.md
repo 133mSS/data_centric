@@ -64,6 +64,7 @@ Tài khoản Demo được lưu riêng trong `baomatdulieu_demo`. Sau khi tạo 
 - Server chỉ bind vào `127.0.0.1`; không mở ra mạng LAN hoặc Internet.
 - Không có chế độ bypass đăng nhập, không giả lập tài khoản, không cho browser tự chọn `release_context`.
 - Release context được backend suy ra từ role của user đã xác thực: `INTERNAL_ASSISTANT` cho Nhân viên/Manager/Ban lãnh đạo; `SHARE_SUMMARY` cho Đối tác và mọi role không xác định (fail closed). Browser không được gửi hoặc tự chọn release context.
+- Signed token có claim `aud` là tên database phát hành; token từ `baomatdulieu` không dùng được ở `baomatdulieu_demo`. Sau khi chuyển sang DB Demo, người dùng phải đăng nhập lại bằng tài khoản/MFA đã seed riêng trong DB Demo.
 - Token được giữ trong `sessionStorage` của tab và hết hạn theo cơ chế token hiện có (1 giờ).
 - Không ghi password, OTP, token hoặc raw answer vào console server.
 - Giao diện chỉ đọc; không có chức năng upload/xóa/sửa tài liệu hoặc chạy script thực nghiệm từ trình duyệt.
