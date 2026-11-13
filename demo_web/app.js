@@ -53,11 +53,11 @@
       setService('vector-service','vector-detail',vectorsOk, vectorsOk ? 'Đã có embeddings' : 'Thiếu embeddings', `${h.database?.embedded_chunks ?? 0}/${h.database?.chunks ?? 0} chunks có vector`);
       if (h.database?.ok && !h.database?.fixture_users_ready) {
         $('fixture-warning').classList.remove('hidden');
-        $('fixture-warning').innerHTML = `Tài khoản demo chưa sẵn sàng (${h.database.fixture_users_count || 0}/5 có MFA). Cần kiểm tra fixture users trong database <b>baomatdulieu</b>. Không chạy seed lại nếu chưa chấp nhận việc xoay mật khẩu và MFA.`;
+        $('fixture-warning').innerHTML = `Tài khoản demo chưa sẵn sàng (${h.database.fixture_users_count || 0}/5 có MFA). Cần kiểm tra fixture users trong database <b>baomatdulieu_demo</b>. Không chạy seed lại nếu chưa chấp nhận việc xoay mật khẩu và MFA.`;
       } else $('fixture-warning').classList.add('hidden');
       if (h.database?.ok && (h.database?.chunks_missing_embedding || 0) > 0) {
         $('fixture-warning').classList.remove('hidden');
-        $('fixture-warning').innerHTML += ` <br>Database ứng dụng còn <b>${h.database.chunks_missing_embedding}</b> chunk chưa có embedding. Sau khi Ollama sẵn sàng, chạy <code>python app/generate_embeddings.py</code> từ thư mục gốc với <code>POSTGRES_DB=baomatdulieu</code>. Không chạy trên database benchmark.`;
+        $('fixture-warning').innerHTML += ` <br>Database Demo <b>baomatdulieu_demo</b> còn <b>${h.database.chunks_missing_embedding}</b> chunk chưa có embedding. Runtime Demo không tự tạo vector. Hãy kiểm tra quá trình provision/copy từ benchmark và inventory của Demo DB; không chạy script tạo embedding trên <code>baomatdulieu</code> hoặc <code>baomatdulieu_benchmark</code> để sửa lỗi của Demo.`;
       }
     } catch (err) { $('system-status').textContent = 'Không kiểm tra được dịch vụ'; }
   }
