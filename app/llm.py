@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import requests
+from html import escape as escape_html
 
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -97,6 +98,11 @@ def _extractive_record_fallback(query: str, retrieved_chunks) -> str | None:
         f"Tìm thấy tài liệu khớp mã hồ sơ {ids_text}. "
         + " ".join(parts)
     )
+def _escape_untrusted_prompt_value(value: object) -> str:
+    """Escape untrusted database text before embedding it in prompt markup."""
+    return escape_html("" if value is None else str(value), quote=True)
+
+
 def _post_ollama(prompt: str) -> str:
     response = requests.post(
         OLLAMA_URL,
@@ -136,15 +142,16 @@ def generate_answer(query, retrieved_chunks):
     context_parts = []
     for row in retrieved_chunks:
         document_id = row[1]
-        title = row[2]
-        classification = row[3]
-        content = row[5]
+        title = _escape_untrusted_prompt_value(row[2])
+        classification = _escape_untrusted_prompt_value(row[3])
+        department = _escape_untrusted_prompt_value(row[4]) or "Không gán"
+        content = _escape_untrusted_prompt_value(row[5])
         reference_codes = sorted(codes_by_document.get(document_id, set()))
         reference_label = ", ".join(reference_codes) if reference_codes else "không có trong nội dung đã truy xuất"
         context_parts.append(
             f"[DOCUMENT #{document_id} | REFERENCE CODE: {reference_label}] "
             f"{title} | Classification: {classification} | "
-            f"Department: {row[4] or 'Không gán'}\n"
+            f"Department: {department}\n"
             f"<DOCUMENT_CONTENT>\n{content}\n</DOCUMENT_CONTENT>"
         )
     context = "\n\n".join(context_parts)
