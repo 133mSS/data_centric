@@ -429,9 +429,11 @@ class DemoHandler(BaseHTTPRequestHandler):
         by_class = defaultdict(int)
         for d in allowed:
             by_class[d["classification"]] += 1
+        from controlled_rag import release_context_for_user
+        release_context = release_context_for_user(user)
         return self._send_json({"user": _user_payload(user), "allowed_documents": len(allowed),
                                 "allowed_chunks": chunks, "documents_by_classification": dict(by_class),
-                                "audit_last_24h": activity, "release_context": RELEASE_CONTEXT})
+                                "audit_last_24h": activity, "release_context": release_context})
 
     def _documents(self, user):
         with _db_session() as conn:
