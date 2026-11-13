@@ -163,7 +163,7 @@ def answer_query(token: str, query: str, top_k: int = 3) -> dict:
 
 
 def answer_internal_query(token: str, query: str, top_k: int = 3) -> dict:
-    """Local-demo Q&A: context is selected only after the signed token is verified."""
+    """Local demo entrypoint with backend-derived Output DLP context."""
     request_id = str(uuid4())
     if not isinstance(token, str) or not token.strip():
         return {
@@ -179,12 +179,20 @@ def answer_internal_query(token: str, query: str, top_k: int = 3) -> dict:
             "request_id": request_id, "release_context": DEFAULT_RELEASE_CONTEXT,
             "output_dlp_executed": False,
         }
+
     try:
+        # One connection and one verified identity: do not resolve role in a
+        # separate transaction and then reopen a connection for the request.
         with psycopg2.connect(**get_db_config()) as conn:
-            # The connection-level function verifies token and loads the role.
-            # The context selector here is supplied from the same verified identity
-            # via its dedicated server-owned wrapper below.
-            user = user_from_token(conn, token)
+            try:
+                user = user_from_token(conn, token)
+            except (AuthenticationError, RuntimeError):
+                return {
+                    "answer": "Yêu cầu xác thực không hợp lệ hoặc đã hết hạn.",
+                    "decision": "BLOCK", "retrieved_doc_ids": [],
+                    "request_id": request_id, "release_context": DEFAULT_RELEASE_CONTEXT,
+                    "output_dlp_executed": False,
+                }
             context = release_context_for_user(user)
             return _answer_query_with_connection(
                 conn, token, query, top_k=top_k,
