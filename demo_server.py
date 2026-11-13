@@ -111,7 +111,8 @@ def _experiment_summary() -> dict:
     injection = _json_file(injection_path) if injection_path else None
     ablation = _json_file(ablation_path) if ablation_path else None
 
-    wp6_rows = _read_csv(results / "wp6_retrieval_matrix_seed4206.csv")
+    wp6_path = _latest_file(results, "wp6_retrieval_matrix_seed4206*.csv")
+    wp6_rows = _read_csv(wp6_path) if wp6_path else []
     wp6 = None
     if wp6_rows:
         passed = sum(1 for row in wp6_rows if _truthy(row.get("pass", "")))
