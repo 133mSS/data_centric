@@ -463,8 +463,8 @@ class DemoHandler(BaseHTTPRequestHandler):
             return self._send_json({"error": "Câu hỏi tối đa 800 ký tự."}, 400)
         token = self._bearer()
         try:
-            from controlled_rag import answer_query
-            result = answer_query(token, query, top_k=3)
+            from controlled_rag import answer_internal_query
+            result = answer_internal_query(token, query, top_k=3)
         except Exception:
             return self._send_json({"error": "Không thể xử lý câu hỏi qua Controlled RAG."}, 503)
 
