@@ -127,3 +127,34 @@ The local chat demo derives its Output DLP release context on the backend from t
 - `SHARE_SUMMARY` continues to redact confirmed protected matches and block uncertain configured summaries.
 
 Run `python -m pytest -q` after pulling the demo branch. The regression tests cover role-to-context routing, technical filename redaction in share context, internal release, and no-result handling.
+
+
+## 5. Local Demo database (separate from benchmark)
+
+The interactive Demo uses a third database, baomatdulieu_demo. It is deliberately isolated from both the original application database and the benchmark database.
+
+- baomatdulieu remains unchanged and is still used by existing application-policy tests/tools.
+- baomatdulieu_benchmark remains the source of benchmark data and results.
+- baomatdulieu_demo receives a copy of documents, chunks and real embeddings only. It has separate users, MFA secrets and audit rows.
+
+After the benchmark corpus has 16,000 documents, 48,000 chunks and 48,000 real embeddings, run:
+
+~~~powershell
+. .\scripts\load_demo_env.ps1
+python .\scripts\setup_demo_database.py
+python .\scripts\seed_demo_users.py
+~~~
+
+The database creation script requires CREATEDB permission. It creates baomatdulieu_demo if absent, applies the application schema and audit migration, copies the corpus in batches, creates a cosine HNSW index and verifies row counts. It does not copy benchmark users/MFA, audit data, query cases or benchmark measurements. It never drops or truncates a database; an incomplete pre-existing Demo database is refused for manual inspection.
+
+The user-provisioning script prompts for a shared Demo password, creates nv_dev, mgr_tech, mgr_sales, ceo_boss and partner_01, and prints fresh TOTP secrets/URIs once. Save each TOTP secret in an Authenticator app. It refuses to rotate existing credentials unless --rotate is explicitly requested.
+
+Start the local UI with:
+
+~~~powershell
+.\scripts\start_demo.ps1
+~~~
+
+Open http://127.0.0.1:8765. The Demo server and interactive Controlled RAG are pinned to baomatdulieu_demo; POSTGRES_DB stays baomatdulieu and BENCHMARK_DB_NAME stays baomatdulieu_benchmark.
+
+See README_DEMO.md for the complete Demo checklist, account roles, troubleshooting and test instructions.
