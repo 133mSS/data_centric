@@ -211,6 +211,7 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         has_reference_id = any(reference_id in title for reference_id in reference_ids)
         # For explicit record-number lookups, lexical/title relevance must
         # dominate a noisy embedding score. ABAC was applied before this stage.
+        vector_similarity = float(row[6] or 0.0)
         if reference_ids:
             lexical_boost = (
                 (0.30 if exact_phrase else 0.0)
@@ -218,10 +219,16 @@ def vector_search_with_audit(conn, user, query, top_k=3):
                 + (0.35 if has_reference_id else 0.0)
                 + (0.45 if row[0] in title_candidate_ids else 0.0)
             )
+            # When the user supplies descriptive title terms, lexical match is
+            # primary; vector similarity is only a tie-breaker. A nearby vector
+            # must not override an exact record title.
+            primary_score = lexical_boost + vector_similarity * (
+                1.0 if not title_search_terms else 0.10
+            )
         else:
             lexical_boost = (0.12 if exact_phrase else 0.0) + title_coverage * 0.16
-        vector_similarity = float(row[6] or 0.0)
-        ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
+            primary_score = vector_similarity + lexical_boost
+        ranked.append((primary_score, vector_similarity, row))
 
     ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
     if reference_ids and not title_search_terms:
