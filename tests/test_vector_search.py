@@ -209,3 +209,51 @@ def test_short_title_phrase_receives_title_coverage_boost(monkeypatch):
 
     assert denied == []
     assert allowed[0][1] == 10
+
+
+
+def test_explicit_document_reference_is_retrieved_by_acl_filtered_title_lookup(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    # The vector-first pool contains a high-similarity neighbor, while the
+    # exact requested document is returned by the parameterized title lookup.
+    vector_neighbor = (
+        99, 11, "Access Service — Báo cáo vận hành — hồ sơ 00038",
+        "Nội bộ", "Kỹ thuật", "Nội dung liên quan vận hành.", 0.90,
+        "GENERAL_INTERNAL",
+    )
+    exact_document = (
+        38, 10, "Core Platform — Quy trình nội bộ — hồ sơ 00038",
+        "Nội bộ", "Kỹ thuật",
+        "Hồ sơ 00038 của Core Platform đề cập đến quy trình nội bộ.",
+        0.55, "GENERAL_INTERNAL",
+    )
+    cursor.fetchall.side_effect = [
+        [],                  # Shadow baseline (audit only).
+        [vector_neighbor],   # Approximate vector candidates.
+        [exact_document],    # Exact ID + title match inside the PDP allow-list.
+    ]
+
+    query = "cho tôi thông tin về Core Platform — Quy trình nội bộ — hồ sơ số 00038"
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        query, top_k=1,
+    )
+
+    assert denied == []
+    assert len(allowed) == 1
+    assert allowed[0][1] == 10
+    assert allowed[0][2] == "Core Platform — Quy trình nội bộ — hồ sơ 00038"
+
+    # The lexical lookup remains scoped to the exact same PDP allow-list.
+    lookup_call = cursor.execute.call_args_list[2]
+    lookup_sql, lookup_params = lookup_call.args
+    normalized_sql = " ".join(lookup_sql.split())
+    assert "WHERE c.document_id = ANY(%s)" in normalized_sql
+    assert "POSITION(lower(%s) IN lower(d.title)) > 0" in normalized_sql
+    assert lookup_params[1] == [10, 11]
+    assert "00038" in lookup_params
