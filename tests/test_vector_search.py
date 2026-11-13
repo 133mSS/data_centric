@@ -319,3 +319,38 @@ def test_bare_record_id_returns_all_chunks_when_only_one_allowed_record_matches(
     assert denied == []
     assert [row[0] for row in allowed] == [101, 102, 103]
     assert {row[1] for row in allowed} == {10}
+
+
+
+def test_full_doc_reference_code_matches_unique_document_content(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    exact_chunk = (
+        301, 10, "Core Platform — Quy trình nội bộ — hồ sơ 00038",
+        "Nội bộ", "Kỹ thuật",
+        "Hồ sơ DOC-1000-00038: Core Platform đề cập đến quy trình nội bộ.",
+        0.65, "GENERAL_INTERNAL",
+    )
+    cursor.fetchall.side_effect = [
+        [],
+        [(302, 11, "DataHub — Phát triển phần mềm — hồ sơ 00038",
+          "Nội bộ", "Kinh doanh", "Nội dung DOC-5000-00038.", 0.99, "GENERAL_INTERNAL")],
+        [exact_chunk],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        "tìm hồ sơ DOC-1000-00038", top_k=3,
+    )
+
+    assert denied == []
+    assert len(allowed) == 1
+    assert allowed[0][1] == 10
+    lookup_sql, lookup_params = cursor.execute.call_args_list[2].args
+    assert "POSITION(%s IN d.content) > 0" in " ".join(lookup_sql.split())
+    assert "DOC-1000-00038" in lookup_params
+    assert "DOC-5000-00038" not in lookup_params
