@@ -172,7 +172,10 @@ def vector_search_with_audit(conn, user, query, top_k=3):
             )
             title_candidates = cur.fetchall()
 
-    # De-duplicate chunks present in both candidate pools.
+    # De-duplicate chunks present in both candidate pools. Keep the set of
+    # ACL-filtered direct title matches so an exact identifier/title hit is not
+    # outranked by a merely similar vector neighbor.
+    title_candidate_ids = {row[0] for row in title_candidates}
     candidates_by_id = {row[0]: row for row in vector_candidates}
     for row in title_candidates:
         candidates_by_id[row[0]] = row
@@ -201,6 +204,7 @@ def vector_search_with_audit(conn, user, query, top_k=3):
             (0.12 if exact_phrase else 0.0)
             + title_coverage * 0.16
             + (0.20 if has_reference_id else 0.0)
+            + (0.45 if row[0] in title_candidate_ids else 0.0)
         )
         vector_similarity = float(row[6] or 0.0)
         ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
