@@ -79,17 +79,8 @@
     try {
       const d = await api('/api/overview'); state.user = d.user;
       const contextBadge = $('context-lock');
-      if (contextBadge) contextBadge.textContent = d.release_context === 'INTERNAL_ASSISTANT'
-        ? '🔒 INTERNAL_ASSISTANT · NỘI BỘ'
-        : '🔒 SHARE_SUMMARY · CHIA SẺ HẠN CHẾ';
-      const contextBadge = $('context-lock');
-      if (contextBadge) contextBadge.textContent = d.release_context === 'INTERNAL_ASSISTANT'
-        ? '🔒 INTERNAL_ASSISTANT · NỘI BỘ'
-        : '🔒 SHARE_SUMMARY · CHIA SẺ HẠN CHẾ';
-      const contextBadge = $('context-lock');
       if (contextBadge) {
-        const context = d.release_context;
-        contextBadge.textContent = context === 'INTERNAL_ASSISTANT'
+        contextBadge.textContent = d.release_context === 'INTERNAL_ASSISTANT'
           ? '🔒 INTERNAL_ASSISTANT · NỘI BỘ'
           : '🔒 SHARE_SUMMARY · CHIA SẺ HẠN CHẾ';
       }
@@ -105,6 +96,7 @@
       $('user-name').textContent = d.user.username; $('user-role').textContent = `${d.user.role} · ${d.user.department || 'Không thuộc phòng ban'}`;
     } catch (err) { toast(err.message); }
   }
+
   async function loadDocuments() {
     $('documents-body').innerHTML = `<tr><td colspan="6" class="empty-state">Đang tải…</td></tr>`;
     try { const data = await api('/api/documents'); state.documents = data.documents || []; $('documents-count').textContent = `${data.count} tài liệu được phép`; renderDocuments(); }
