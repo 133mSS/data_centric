@@ -10,8 +10,24 @@ from source_documents import chunks_to_source_documents
 from db_config import get_db_config
 
 
-# Public controlled RAG always uses the least-privileged release policy.
-RELEASE_CONTEXT = "SHARE_SUMMARY"
+INTERNAL_RELEASE_ROLES = {"Nhân viên", "Manager", "Ban lãnh đạo"}
+EXTERNAL_RELEASE_ROLES = {"Đối tác"}
+DEFAULT_RELEASE_CONTEXT = "SHARE_SUMMARY"
+
+
+def release_context_for_user(user: dict) -> str:
+    """Resolve release policy from authenticated backend identity, never browser input.
+
+    Internal employees/managers/leadership ask questions within their ABAC-
+    authorized workspace. Partner-facing sessions retain the restrictive
+    SHARE_SUMMARY policy. Unknown roles fail closed to SHARE_SUMMARY.
+    """
+    role = user.get("role") if isinstance(user, dict) else None
+    if role in INTERNAL_RELEASE_ROLES:
+        return "INTERNAL_ASSISTANT"
+    if role in EXTERNAL_RELEASE_ROLES:
+        return "SHARE_SUMMARY"
+    return DEFAULT_RELEASE_CONTEXT
 
 
 def _answer_query_with_connection(conn, token, query, top_k=3):
@@ -23,7 +39,10 @@ def _answer_query_with_connection(conn, token, query, top_k=3):
         return {
             "answer": "Yêu cầu xác thực không hợp lệ hoặc đã hết hạn.",
             "decision": "BLOCK", "retrieved_doc_ids": [], "request_id": request_id,
+            "release_context": DEFAULT_RELEASE_CONTEXT,
         }
+
+    release_context = release_context_for_user(user)
 
     try:
         retrieved_chunks = vector_search(conn, user, query, top_k=top_k)
@@ -33,36 +52,30 @@ def _answer_query_with_connection(conn, token, query, top_k=3):
                 conn, request_id=request_id, user_id=user["id"], stage="retrieval",
                 decision="ALLOW", reason="allowed", document_id=chunk[1],
                 chunk_id=chunk[0], rule_id="acl_policy", query_text=query,
-                release_context=RELEASE_CONTEXT,
+                release_context=release_context,
             )
         for chunk in denied_shadow_chunks:
             log_decision(
                 conn, request_id=request_id, user_id=user["id"], stage="retrieval",
                 decision="DENY", reason="policy_violation",
                 document_id=chunk["document_id"], chunk_id=chunk["chunk_id"],
-                rule_id="acl_policy", query_text=query, release_context=RELEASE_CONTEXT,
+                rule_id="acl_policy", query_text=query, release_context=release_context,
             )
         if not retrieved_chunks:
             conn.commit()
-            return {"answer": "Không có tài liệu được phép để trả lời.",
-                    "decision": "BLOCK", "retrieved_doc_ids": [], "request_id": request_id}
+            return {
+                "answer": "Không có tài liệu được phép để trả lời.",
+                "decision": "BLOCK", "retrieved_doc_ids": [],
+                "request_id": request_id, "release_context": release_context,
+                "output_dlp_executed": False,
+            }
 
         raw_answer = generate_answer(query, retrieved_chunks)
         source_documents = chunks_to_source_documents(retrieved_chunks)
-        try:
-            dlp_result = process_output_safely(
-                raw_answer, source_documents, release_context=RELEASE_CONTEXT,
-            )
-        except Exception:
-            # Fail closed: raw_answer must never be returned if DLP errors.
-            log_decision(
-                conn, request_id=request_id, user_id=user["id"], stage="output_dlp",
-                decision="BLOCK", reason="processing_error", rule_id="dlp_fail_closed",
-                query_text=query, release_context=RELEASE_CONTEXT,
-            )
-            conn.commit()
-            return {"answer": "Không thể phát hành câu trả lời do kiểm soát bảo mật thất bại.",
-                    "decision": "BLOCK", "retrieved_doc_ids": [], "request_id": request_id}
+        # process_output_safely is fail-closed and returns BLOCK on any DLP error.
+        dlp_result = process_output_safely(
+            raw_answer, source_documents, release_context=release_context,
+        )
 
         decision = dlp_result.get("decision", "BLOCK")
         matches = dlp_result.get("matches") or []
@@ -73,82 +86,74 @@ def _answer_query_with_connection(conn, token, query, top_k=3):
                     conn, request_id=request_id, user_id=user["id"], stage="output_dlp",
                     decision=decision, reason="sensitive_match",
                     rule_id=f"match:{safe_type}:start={match.get('start')}:end={match.get('end')}",
-                    query_text=query, release_context=RELEASE_CONTEXT,
+                    query_text=query, release_context=release_context,
                 )
         elif decision == "BLOCK":
             log_decision(
                 conn, request_id=request_id, user_id=user["id"], stage="output_dlp",
                 decision="BLOCK", reason="processing_error", rule_id="dlp_fail_closed",
-                query_text=query, release_context=RELEASE_CONTEXT,
+                query_text=query, release_context=release_context,
             )
         conn.commit()
-        safe_answer = dlp_result.get("answer", "") if decision in {"ALLOW", "REDACT"} else "Không thể phát hành câu trả lời do kiểm soát bảo mật thất bại."
+        safe_answer = (
+            dlp_result.get("answer", "")
+            if decision in {"ALLOW", "REDACT"}
+            else "Không thể phát hành câu trả lời do kiểm soát bảo mật thất bại."
+        )
         return {
             "answer": safe_answer,
             "decision": decision,
             "retrieved_doc_ids": sorted({int(chunk[1]) for chunk in retrieved_chunks}),
             "request_id": request_id,
+            "release_context": release_context,
+            "output_dlp_executed": True,
+            "dlp_match_count": int(dlp_result.get("matched_count", len(matches)) or 0),
         }
     except Exception:
         conn.rollback()
-        # Do not include internal exceptions or raw model output in the response.
-        return {"answer": "Không thể xử lý yêu cầu một cách an toàn.",
-                "decision": "BLOCK", "retrieved_doc_ids": [], "request_id": request_id}
+        return {
+            "answer": "Không thể xử lý yêu cầu một cách an toàn.",
+            "decision": "BLOCK", "retrieved_doc_ids": [],
+            "request_id": request_id, "release_context": release_context,
+            "output_dlp_executed": False,
+        }
 
-def answer_query(
-    token: str,
-    query: str,
-    top_k: int = 3,
-) -> dict:
+
+def answer_query(token: str, query: str, top_k: int = 3) -> dict:
     """Public controlled RAG entry point; authentication is mandatory."""
-    from uuid import uuid4
-
     request_id = str(uuid4())
 
     if not isinstance(token, str) or not token.strip():
         return {
             "answer": "Yêu cầu xác thực không hợp lệ hoặc đã hết hạn.",
-            "decision": "BLOCK",
-            "retrieved_doc_ids": [],
-            "request_id": request_id,
+            "decision": "BLOCK", "retrieved_doc_ids": [],
+            "request_id": request_id, "release_context": DEFAULT_RELEASE_CONTEXT,
         }
-
     if not isinstance(query, str) or not query.strip():
         return {
             "answer": "Truy vấn không hợp lệ.",
-            "decision": "BLOCK",
-            "retrieved_doc_ids": [],
-            "request_id": request_id,
+            "decision": "BLOCK", "retrieved_doc_ids": [],
+            "request_id": request_id, "release_context": DEFAULT_RELEASE_CONTEXT,
         }
 
     try:
         with psycopg2.connect(**get_db_config()) as conn:
-            return _answer_query_with_connection(
-                    conn,
-                    token,
-                    query,
-                    top_k=top_k,
-                )
+            return _answer_query_with_connection(conn, token, query, top_k=top_k)
     except Exception:
         return {
             "answer": "Không thể xử lý yêu cầu một cách an toàn.",
-            "decision": "BLOCK",
-            "retrieved_doc_ids": [],
-            "request_id": request_id,
+            "decision": "BLOCK", "retrieved_doc_ids": [],
+            "request_id": request_id, "release_context": DEFAULT_RELEASE_CONTEXT,
         }
 
 
 if __name__ == "__main__":
     token = os.getenv("RAG_ACCESS_TOKEN", "")
     query = os.getenv("RAG_QUERY", "")
-
     if not token or not query:
         raise SystemExit(
             "Set RAG_ACCESS_TOKEN and RAG_QUERY; authenticate via app.auth.authenticate first."
         )
-
-    # The CLI owns this connection and calls the connection-level implementation.
-    # The public answer_query(token, query) remains available to application callers.
     conn = psycopg2.connect(**get_db_config())
     try:
         result = _answer_query_with_connection(conn, token, query)
