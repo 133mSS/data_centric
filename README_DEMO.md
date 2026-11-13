@@ -77,3 +77,17 @@ Nếu backend báo fixture user hoặc MFA secret chưa có, hãy kiểm tra đ�
 - **Không có tài liệu nguồn:** kiểm tra bảng `documents`, `chunks`, embedding và quyền của người dùng; frontend không tự tạo dữ liệu.
 - **Lỗi audit column/request_id:** với volume PostgreSQL cũ, init scripts không tự chạy lại. Kiểm tra và áp dụng `database/init/05_audit.sql` vào đúng database `baomatdulieu` nếu migration chưa được chạy.
 - **Câu trả lời bị BLOCK:** xem Security Trace và Audit Log; đây có thể là quyết định fail-closed của pipeline, không nên sửa thành ALLOW chỉ để demo.
+
+## 7. Chạy kiểm thử trên Windows PowerShell
+
+Các test unit không cần PostgreSQL. Các test trong `tests/test_policy.py` cần database ứng dụng `baomatdulieu`; `tests/test_retrieval_postgres_integration.py` cần database benchmark `baomatdulieu_benchmark`.
+
+Để chạy đầy đủ các test tích hợp, nạp cấu hình từ `.env` trong cùng cửa sổ PowerShell trước khi gọi pytest:
+
+```powershell
+.\scripts\load_demo_env.ps1
+python -m py_compile .\app\controlled_rag.py .\demo_server.py
+python -m pytest -q
+```
+
+Nếu chưa nạp `POSTGRES_USER` và `POSTGRES_PASSWORD`, các fixture database sẽ được đánh dấu `SKIPPED` thay vì báo lỗi setup. Nếu đã nạp credentials mà PostgreSQL không kết nối được hoặc thiếu database/fixture, test tích hợp vẫn báo lỗi để không che giấu vấn đề môi trường.
