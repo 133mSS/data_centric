@@ -286,3 +286,36 @@ def test_explicit_unknown_record_id_does_not_fall_back_to_nearby_vector_results(
     assert allowed == []
     assert denied == []
     assert cursor.execute.call_count == 3
+
+
+
+def test_bare_record_id_returns_all_chunks_when_only_one_allowed_record_matches(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    record_chunks = [
+        (101, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Chunk 1: hồ sơ đề cập đến giám sát dịch vụ.", 0.7, "GENERAL_INTERNAL"),
+        (102, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Chunk 2: nhóm phụ trách và trạng thái.", 0.6, "GENERAL_INTERNAL"),
+        (103, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Chunk 3: phân loại và mã tham chiếu.", 0.5, "GENERAL_INTERNAL"),
+    ]
+    cursor.fetchall.side_effect = [
+        [],
+        [(999, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+          "Nội bộ", "Kỹ thuật", "Vector neighbor", 0.8, "GENERAL_INTERNAL")],
+        record_chunks,
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        "tìm thông tin về hồ sơ 00006", top_k=3,
+    )
+
+    assert denied == []
+    assert [row[0] for row in allowed] == [101, 102, 103]
+    assert {row[1] for row in allowed} == {10}
