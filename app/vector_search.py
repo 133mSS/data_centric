@@ -1,6 +1,7 @@
 import psycopg2
 import requests
 import threading
+import re
 
 from retrieval import get_allowed_document_ids
 from pep import enforce_access
@@ -93,26 +94,27 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     # Controlled retrieval remains ACL-filtered before ranking. Fetch a bounded
     # candidate pool, then rerank it with title/query lexical relevance.
     # ABAC is applied in SQL before candidate generation; this never broadens access.
-    candidate_k = min(max(top_k * 4, top_k), 50)
+    # Use a wider, still bounded vector candidate pool so title-aware reranking
+    # has a realistic chance to recover exact-document questions.
+    candidate_k = min(max(top_k * 10, 50), 100)
+    candidate_sql = """
+        SELECT c.id AS chunk_id, c.document_id, d.title,
+               d.classification, d.department, c.content,
+               1 - (c.embedding <=> %s::vector) AS similarity,
+               d.protection_profile
+        FROM chunks c
+        JOIN documents d ON c.document_id = d.id
+        WHERE c.document_id = ANY(%s)
+          AND c.embedding IS NOT NULL
+        ORDER BY c.embedding <=> %s::vector
+        LIMIT %s
+    """
     with conn.cursor() as cur:
         cur.execute(
-            """
-            SELECT c.id AS chunk_id, c.document_id, d.title,
-                   d.classification, d.department, c.content,
-                   1 - (c.embedding <=> %s::vector) AS similarity,
-                   d.protection_profile
-            FROM chunks c
-            JOIN documents d ON c.document_id = d.id
-            WHERE c.document_id = ANY(%s)
-              AND c.embedding IS NOT NULL
-            ORDER BY c.embedding <=> %s::vector
-            LIMIT %s
-            """,
+            candidate_sql,
             (query_vector, allowed_document_ids, query_vector, candidate_k),
         )
-        candidates = cur.fetchall()
-
-    import re
+        vector_candidates = cur.fetchall()
 
     def _terms(value):
         # Vietnamese diacritics are preserved; ignore very short tokens.
@@ -126,8 +128,60 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         decomposed = unicodedata.normalize("NFD", (value or "").casefold())
         return "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn").replace("đ", "d")
 
+    # Remove request filler before comparing query terms with document titles.
+    # Keep the original token spelling for PostgreSQL substring matching so
+    # Vietnamese diacritics are respected by ILIKE/POSITION.
+    stopwords = {
+        "cho", "toi", "thong", "tin", "ve", "so", "ho", "tai", "lieu",
+        "duoc", "cung", "cap", "nhu", "the", "nao", "la", "gi", "cua",
+        "va", "trong", "mot", "cac", "nhung", "hay", "giup", "biet",
+    }
     query_terms = _terms(query)
-    query_terms_folded = {_strip_vietnamese_diacritics(t) for t in query_terms}
+    title_search_terms = sorted({
+        term for term in query_terms
+        if _strip_vietnamese_diacritics(term) not in stopwords
+    })
+
+    # Supplement vector candidates with a parameterized, ACL-filtered title
+    # lookup. This is important for explicit document IDs/titles, which may be
+    # absent from the first approximate-nearest-neighbour window. It never
+    # searches outside the allow-list returned by PDP.
+    title_candidates = []
+    if title_search_terms:
+        title_conditions = " AND ".join(
+            ["POSITION(lower(%s) IN lower(d.title)) > 0"] * len(title_search_terms)
+        )
+        title_sql = f"""
+            SELECT c.id AS chunk_id, c.document_id, d.title,
+                   d.classification, d.department, c.content,
+                   1 - (c.embedding <=> %s::vector) AS similarity,
+                   d.protection_profile
+            FROM chunks c
+            JOIN documents d ON c.document_id = d.id
+            WHERE c.document_id = ANY(%s)
+              AND c.embedding IS NOT NULL
+              AND {title_conditions}
+            ORDER BY c.document_id, c.id
+            LIMIT %s
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                title_sql,
+                (query_vector, allowed_document_ids, *title_search_terms, candidate_k),
+            )
+            title_candidates = cur.fetchall()
+
+    # De-duplicate chunks present in both candidate pools.
+    candidates_by_id = {row[0]: row for row in vector_candidates}
+    for row in title_candidates:
+        candidates_by_id[row[0]] = row
+    candidates = list(candidates_by_id.values())
+
+    query_terms_folded = {
+        _strip_vietnamese_diacritics(t)
+        for t in title_search_terms
+    }
+    reference_ids = re.findall(r"(?<!\\d)\\d{3,}(?!\\d)", query)
     ranked = []
     for row in candidates:
         title = str(row[2] or "")
@@ -142,7 +196,12 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         exact_phrase = bool(query_phrase) and query_phrase in title_phrase
         title_coverage = overlap / max(1, len(query_terms_folded))
         title_coverage = min(title_coverage, 1.0)
-        lexical_boost = (0.12 if exact_phrase else 0.0) + title_coverage * 0.04
+        has_reference_id = any(reference_id in title for reference_id in reference_ids)
+        lexical_boost = (
+            (0.12 if exact_phrase else 0.0)
+            + title_coverage * 0.16
+            + (0.20 if has_reference_id else 0.0)
+        )
         vector_similarity = float(row[6] or 0.0)
         ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
 
