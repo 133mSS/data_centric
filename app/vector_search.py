@@ -232,19 +232,24 @@ def vector_search_with_audit(conn, user, query, top_k=3):
 
     ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
     if reference_ids and not title_search_terms:
-        # A bare repeated ID can map to multiple generated scales. Return one
-        # best chunk per distinct allowed document so the LLM can explain the
-        # ambiguity instead of filling top_k with chunks from one record.
-        authorized_chunks = []
-        seen_documents = set()
-        for item in ranked:
-            document_id = item[2][1]
-            if document_id in seen_documents:
-                continue
-            seen_documents.add(document_id)
-            authorized_chunks.append(item[2])
-            if len(authorized_chunks) >= top_k:
-                break
+        # A bare repeated ID can map to several generated scales. If only one
+        # allowed document has that ID, retain all its chunks for a stable,
+        # complete summary. If multiple allowed documents share it, return one
+        # representative chunk per document so the LLM can explain ambiguity.
+        document_ids_in_rank_order = list(dict.fromkeys(item[2][1] for item in ranked))
+        if len(document_ids_in_rank_order) == 1:
+            authorized_chunks = [item[2] for item in ranked[:top_k]]
+        else:
+            authorized_chunks = []
+            seen_documents = set()
+            for item in ranked:
+                document_id = item[2][1]
+                if document_id in seen_documents:
+                    continue
+                seen_documents.add(document_id)
+                authorized_chunks.append(item[2])
+                if len(authorized_chunks) >= top_k:
+                    break
     else:
         authorized_chunks = [item[2] for item in ranked[:top_k]]
     return authorized_chunks, denied_shadow_chunks
