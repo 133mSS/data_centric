@@ -493,15 +493,20 @@ class DemoHandler(BaseHTTPRequestHandler):
         release_context = result.get("release_context", DEFAULT_RELEASE_CONTEXT)
         dlp_executed = bool(result.get("output_dlp_executed", bool(dlp_rows)))
         dlp_trace_decision = dlp_decision if dlp_executed else "NOT_RUN"
+        retrieval_decision = "ALLOW" if sources else ("DENY" if denied > 0 else "NO_RESULT")
+        if dlp_decision == "NO_RESULT":
+            retrieval_decision = "NO_RESULT"
+        elif dlp_decision == "BLOCK" and not dlp_executed and not sources and denied == 0:
+            retrieval_decision = "ERROR"
         trace = [
             {"stage": "Xác thực", "decision": "ALLOW", "detail": f"Danh tính {user['username']} đã được xác thực bằng token còn hiệu lực."},
             {"stage": "ABAC / Retrieval",
-             "decision": "ALLOW" if sources else ("DENY" if denied > 0 else "NO_RESULT"),
+             "decision": retrieval_decision,
              "detail": (f"{len(sources)} tài liệu trong Top-K sau lọc ABAC; {denied} lượt ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."
                         if sources or denied else "Không tìm thấy chunk phù hợp trong phạm vi truy cập; đây không phải quyết định từ chối quyền.")},
             {"stage": "Output DLP", "decision": dlp_trace_decision,
              "detail": (f"Ngữ cảnh phát hành do backend xác định: {release_context}. Số bản ghi match được audit: {dlp_matches}."
-                        if dlp_executed else "Không có tài liệu được phép sau retrieval hoặc pipeline dừng an toàn; Output DLP không được gọi.")},
+                        if dlp_executed else "Output DLP không được gọi vì không có kết quả retrieval hoặc pipeline dừng an toàn.")},
         ]
         self._send_json({"request_id": request_id, "answer": result.get("answer") or "Không có câu trả lời được phép phát hành.",
                          "decision": dlp_decision, "output_dlp_executed": dlp_executed, "release_context": release_context,
