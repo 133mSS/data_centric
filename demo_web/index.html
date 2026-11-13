@@ -83,13 +83,13 @@
         </div>
         <div class="overview-columns">
           <article class="panel classification-panel"><div class="panel-heading"><div><p class="eyebrow">ACCESS SCOPE</p><h3>Phân loại tài liệu được phép</h3></div><span class="panel-tag">ABAC / PDP</span></div><div id="classification-bars" class="classification-bars"><p class="empty-state">Đang tải phạm vi truy cập…</p></div></article>
-          <article class="panel policy-panel"><div class="panel-heading"><div><p class="eyebrow">POLICY FLOW</p><h3>Hai ranh giới bảo vệ</h3></div></div><div class="policy-steps"><div class="policy-step"><span>01</span><div><b>ABAC trước Retrieval</b><small>Lọc tài liệu theo role, clearance và department.</small></div></div><div class="policy-step"><span>02</span><div><b>Output DLP trước phát hành</b><small>ALLOW, REDACT hoặc BLOCK theo SHARE_SUMMARY.</small></div></div><div class="policy-step"><span>03</span><div><b>Audit Log</b><small>Ghi nhận quyết định ở retrieval và output_dlp.</small></div></div></div></article>
+          <article class="panel policy-panel"><div class="panel-heading"><div><p class="eyebrow">POLICY FLOW</p><h3>Hai ranh giới bảo vệ</h3></div></div><div class="policy-steps"><div class="policy-step"><span>01</span><div><b>ABAC trước Retrieval</b><small>Lọc tài liệu theo role, clearance và department.</small></div></div><div class="policy-step"><span>02</span><div><b>Output DLP trước phát hành</b><small>INTERNAL_ASSISTANT cho hỏi đáp nội bộ; SHARE_SUMMARY cho luồng chia sẻ.</small></div></div><div class="policy-step"><span>03</span><div><b>Audit Log</b><small>Ghi nhận quyết định ở retrieval và output_dlp.</small></div></div></div></article>
         </div>
         <div id="fixture-warning" class="notice notice-warning hidden"></div>
       </section>
 
       <section id="page-chat" class="page">
-        <div class="page-intro"><div><p class="eyebrow">CONTROLLED RAG</p><h2>Hỏi đáp trên tài liệu được phép</h2><p>Câu hỏi được xử lý qua backend Controlled RAG; giao diện không tự chọn release context.</p></div><span class="context-lock">🔒 SHARE_SUMMARY · TRUSTED BACKEND</span></div>
+        <div class="page-intro"><div><p class="eyebrow">CONTROLLED RAG</p><h2>Hỏi đáp trên tài liệu được phép</h2><p>Backend xác thực danh tính, lọc tài liệu bằng ABAC rồi áp dụng Output DLP theo ngữ cảnh phiên.</p></div><span class="context-lock">🔒 DLP CONTEXT · TRUSTED BACKEND</span></div>
         <div class="chat-policy-note"><b>Lưu ý:</b> DLP · ALLOW chỉ có nghĩa câu trả lời được phép phát hành theo policy; không xác nhận câu trả lời đúng hoặc đủ căn cứ từ tài liệu.</div>
         <div class="chat-layout">
           <section class="panel chat-panel">
