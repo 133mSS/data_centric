@@ -65,7 +65,7 @@ def _answer_query_with_connection(conn, token, query, top_k=3):
             conn.commit()
             return {
                 "answer": "Không có tài liệu được phép để trả lời.",
-                "decision": "BLOCK", "retrieved_doc_ids": [],
+                "decision": "NO_RESULT", "retrieved_doc_ids": [],
                 "request_id": request_id, "release_context": release_context,
                 "output_dlp_executed": False,
             }
