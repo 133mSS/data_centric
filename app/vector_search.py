@@ -146,8 +146,9 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     # lookup. This is important for explicit document IDs/titles, which may be
     # absent from the first approximate-nearest-neighbour window. It never
     # searches outside the allow-list returned by PDP.
+    reference_ids = re.findall(r"(?<!\d)\d{3,}(?!\d)", query)
     title_candidates = []
-    if title_search_terms:
+    if reference_ids and title_search_terms:
         title_conditions = " AND ".join(
             ["POSITION(lower(%s) IN lower(d.title)) > 0"] * len(title_search_terms)
         )
@@ -181,7 +182,6 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         _strip_vietnamese_diacritics(t)
         for t in title_search_terms
     }
-    reference_ids = re.findall(r"(?<!\\d)\\d{3,}(?!\\d)", query)
     ranked = []
     for row in candidates:
         title = str(row[2] or "")
