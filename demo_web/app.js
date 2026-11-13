@@ -78,6 +78,13 @@
   async function loadOverview() {
     try {
       const d = await api('/api/overview'); state.user = d.user;
+      const contextBadge = $('context-lock');
+      if (contextBadge) {
+        const internal = ['Nhân viên', 'Manager', 'Ban lãnh đạo'].includes(d.user.role);
+        contextBadge.textContent = internal
+          ? '🔒 INTERNAL_ASSISTANT · NỘI BỘ'
+          : '🔒 SHARE_SUMMARY · CHIA SẺ HẠN CHẾ';
+      }
       $('metric-documents').textContent = d.allowed_documents;
       $('metric-chunks').textContent = d.allowed_chunks;
       $('metric-clearance').textContent = d.user.clearance_label;
