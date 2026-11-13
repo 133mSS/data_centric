@@ -469,6 +469,26 @@ class DemoHandler(BaseHTTPRequestHandler):
 
         request_id = result.get("request_id")
         doc_ids = result.get("retrieved_doc_ids") or []
+        if result.get("decision") == "BLOCK" and not result.get("output_dlp_executed", False):
+            return self._send_json({
+                "request_id": request_id,
+                "answer": result.get("answer") or "Không thể xử lý yêu cầu một cách an toàn.",
+                "decision": "BLOCK",
+                "output_dlp_executed": False,
+                "release_context": result.get("release_context", DEFAULT_RELEASE_CONTEXT),
+                "sources": [],
+                "trace": [
+                    {"stage": "Xác thực", "decision": "ALLOW",
+                     "detail": f"Danh tính {user['username']} đã được xác thực bằng token còn hiệu lực."},
+                    {"stage": "ABAC / Retrieval", "decision": "ERROR",
+                     "detail": "Pipeline không hoàn tất retrieval; hệ thống dừng an toàn và không phát hành nội dung."},
+                    {"stage": "Output DLP", "decision": "NOT_RUN",
+                     "detail": "Output DLP chưa được gọi vì pipeline dừng trước bước sinh/phát hành câu trả lời."},
+                ],
+                "retrieval": {"allowed_chunks_logged": 0, "denied_candidate_occurrences": 0},
+                "dlp_match_events": 0,
+                "dlp_match_count": 0,
+            })
         with _db_session() as conn:
             from pdp import decide
             with conn.cursor() as cur:
