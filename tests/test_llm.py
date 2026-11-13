@@ -73,3 +73,28 @@ def test_mixed_language_after_repair_returns_safe_fallback():
         result = generate_answer("Câu hỏi thử nghiệm", chunks)
     assert result.startswith("Mô hình chưa tạo được câu trả lời tiếng Việt")
     assert mock_post.call_count == 2
+
+
+
+def test_observed_indonesian_no_information_answer_is_detected_and_repaired():
+    first = Mock()
+    first.raise_for_status.return_value = None
+    first.json.return_value = {
+        "response": "Mohai tidak memiliki informasi tentang tuyển dụng Data Engineering dalam tài liệu."
+    }
+    repaired = Mock()
+    repaired.raise_for_status.return_value = None
+    repaired.json.return_value = {
+        "response": "Tài liệu được cung cấp chưa có thông tin cụ thể về tuyển dụng Data Engineering."
+    }
+    chunks = [
+        (1, 1, "Hồ sơ benchmark", "Công khai", None,
+         "Hồ sơ chỉ nêu trạng thái hệ thống và nhóm phụ trách.")
+    ]
+    with patch("app.llm.requests.post", side_effect=[first, repaired]) as mock_post:
+        result = generate_answer("Thông tin tuyển dụng Data Engineering?", chunks)
+
+    assert "tidak" not in result.casefold()
+    assert "memiliki" not in result.casefold()
+    assert "tuyển dụng Data Engineering" in result
+    assert mock_post.call_count == 2
