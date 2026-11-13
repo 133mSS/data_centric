@@ -135,11 +135,13 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         "cho", "toi", "thong", "tin", "ve", "so", "ho", "tai", "lieu",
         "duoc", "cung", "cap", "nhu", "the", "nao", "la", "gi", "cua",
         "va", "trong", "mot", "cac", "nhung", "hay", "giup", "biet",
+        "tim", "tra", "cuu", "kiem", "vui", "long", "ban", "theo",
     }
     query_terms = _terms(query)
     title_search_terms = sorted({
         term for term in query_terms
         if _strip_vietnamese_diacritics(term) not in stopwords
+        and not re.fullmatch(r"\\d{5,}", term)
     })
 
     # Supplement vector candidates with a parameterized, ACL-filtered title
@@ -148,9 +150,12 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     # searches outside the allow-list returned by PDP.
     reference_ids = re.findall(r"(?<!\d)\d{5,}(?!\d)", query)
     title_candidates = []
-    if reference_ids and title_search_terms:
-        title_conditions = " AND ".join(
-            ["POSITION(lower(%s) IN lower(d.title)) > 0"] * len(title_search_terms)
+    if reference_ids:
+        # A record number is an identifier, not just another semantic token.
+        # Search it independently from natural-language filler ("tìm", "thông tin",
+        # "về", "hồ sơ"), and do not require every query word to occur in the title.
+        reference_conditions = " OR ".join(
+            ["POSITION(%s IN d.title) > 0"] * len(reference_ids)
         )
         title_sql = f"""
             SELECT c.id AS chunk_id, c.document_id, d.title,
@@ -161,14 +166,14 @@ def vector_search_with_audit(conn, user, query, top_k=3):
             JOIN documents d ON c.document_id = d.id
             WHERE c.document_id = ANY(%s)
               AND c.embedding IS NOT NULL
-              AND {title_conditions}
+              AND ({reference_conditions})
             ORDER BY c.document_id, c.id
             LIMIT %s
         """
         with conn.cursor() as cur:
             cur.execute(
                 title_sql,
-                (query_vector, allowed_document_ids, *title_search_terms, candidate_k),
+                (query_vector, allowed_document_ids, *reference_ids, max(candidate_k, 100)),
             )
             title_candidates = cur.fetchall()
 
@@ -185,6 +190,8 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         _strip_vietnamese_diacritics(t)
         for t in title_search_terms
     }
+    meaningful_query_phrase = " ".join(title_search_terms)
+    meaningful_query_phrase = _strip_vietnamese_diacritics(meaningful_query_phrase)
     ranked = []
     for row in candidates:
         title = str(row[2] or "")
@@ -192,20 +199,22 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         title_terms_folded = {_strip_vietnamese_diacritics(t) for t in title_terms}
         overlap = len(query_terms_folded & title_terms_folded)
         title_phrase = _strip_vietnamese_diacritics(title)
-        query_phrase = _strip_vietnamese_diacritics(query.strip())
-        # Exact-title queries receive the strongest bounded signal. Short
-        # distinctive phrases such as "mã nguồn RAG" receive a smaller
-        # title-coverage boost without overwhelming vector similarity.
-        exact_phrase = bool(query_phrase) and query_phrase in title_phrase
+        # Compare the meaningful query tokens after request filler is removed.
+        exact_phrase = bool(meaningful_query_phrase) and meaningful_query_phrase in title_phrase
         title_coverage = overlap / max(1, len(query_terms_folded))
         title_coverage = min(title_coverage, 1.0)
         has_reference_id = any(reference_id in title for reference_id in reference_ids)
-        lexical_boost = (
-            (0.12 if exact_phrase else 0.0)
-            + title_coverage * 0.16
-            + (0.20 if has_reference_id else 0.0)
-            + (0.45 if row[0] in title_candidate_ids else 0.0)
-        )
+        # For explicit record-number lookups, lexical/title relevance must
+        # dominate a noisy embedding score. ABAC was applied before this stage.
+        if reference_ids:
+            lexical_boost = (
+                (0.30 if exact_phrase else 0.0)
+                + title_coverage * 0.40
+                + (0.35 if has_reference_id else 0.0)
+                + (0.45 if row[0] in title_candidate_ids else 0.0)
+            )
+        else:
+            lexical_boost = (0.12 if exact_phrase else 0.0) + title_coverage * 0.16
         vector_similarity = float(row[6] or 0.0)
         ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
 
