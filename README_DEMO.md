@@ -53,10 +53,11 @@ Nếu backend báo fixture user hoặc MFA secret chưa có, hãy kiểm tra đ�
 1. Đăng nhập bằng `nv_dev` và TOTP.
 2. Mở **Tổng quan** để chỉ ra role, department, clearance và số tài liệu được phép.
 3. Mở **Tài liệu được phép** để minh họa danh sách đã lọc qua PDP.
-4. Hỏi: `Quy trình xin nghỉ phép như thế nào?` — cho thấy luồng ALLOW bình thường.
-5. Hỏi: `Kế hoạch sáp nhập với công ty XYZ là gì?` bằng tài khoản `nv_dev` — cho thấy tài liệu vượt quyền không được trả về; phần audit chỉ hiển thị metadata quyết định, không hiển thị nội dung tài liệu bị từ chối.
-6. Mở **Nhật ký kiểm soát** để xem `retrieval` và `output_dlp`.
-7. Mở **Kết quả thực nghiệm** để xem các số liệu WP6, Answer Leakage, Prompt Injection, Ablation và Benchmark đã lưu.
+4. Hỏi: `Mã nguồn hệ thống RAG` hoặc `policy_engine.py` bằng `nv_dev` — tài liệu #6 thuộc Nội bộ/Kỹ thuật nên được phép truy cập và không bị che trong `INTERNAL_ASSISTANT`.
+5. Hỏi: `Kế hoạch sáp nhập với công ty XYZ là gì?` bằng `nv_dev` — tài liệu Tối mật phải bị loại ở ABAC; không được đưa nội dung bị từ chối vào prompt.
+6. Thử `policy_engine.py` bằng tài khoản `partner_01` — phiên đối tác dùng `SHARE_SUMMARY`, đồng thời quyền ABAC vẫn giới hạn tài liệu; không được xem nội dung tài liệu nội bộ.
+7. Mở **Nhật ký kiểm soát** để xem context, quyết định `retrieval` và `output_dlp` của từng request.
+8. Mở **Kết quả thực nghiệm** để xem các số liệu WP6, Answer Leakage, Prompt Injection, Ablation và Benchmark đã lưu.
 
 ## 5. Nguyên tắc an toàn và phạm vi
 
