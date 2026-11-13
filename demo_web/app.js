@@ -151,7 +151,7 @@
     const answerText = data.answer || 'Không có câu trả lời được phép phát hành.';
     const insufficient = /không có đủ thông tin để trả lời|chưa đủ thông tin để trả lời/i.test(answerText);
     const head=document.createElement('b');
-    head.textContent = insufficient ? `Chưa đủ căn cứ từ tài liệu · DLP ${decision}` : `Quyết định DLP · ${decision}`;
+    head.textContent = decision === 'NO_RESULT' ? 'Không tìm thấy tài liệu phù hợp trong phạm vi quyền' : decision === 'BLOCK' ? 'Câu trả lời bị chặn bởi kiểm soát an toàn' : insufficient ? `Chưa đủ căn cứ từ tài liệu · DLP ${decision}` : `Quyết định DLP · ${decision}`;
     const p=document.createElement('p');p.textContent=answerText;
     body.append(head,p);
     // Source metadata is intentionally not repeated under every answer. The
