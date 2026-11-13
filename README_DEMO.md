@@ -122,7 +122,7 @@ Các test policy hiện có vẫn dùng `baomatdulieu`; retrieval integration te
 
 ### Chất lượng Retrieval và câu trả lời
 
-- Query có mã hồ sơ từ 5 chữ số trở lên được xử lý như exact lookup. Mã phải xuất hiện trong tiêu đề tài liệu; kết quả phải nằm trong PDP allow-list.
+- Query có mã hồ sơ từ 5 chữ số trở lên được xử lý như exact lookup. Mã ngắn (ví dụ `00038`) tìm theo tiêu đề và có thể trùng giữa các scale; mã đầy đủ `DOC-1000-00038` tìm trong nội dung tài liệu để định danh duy nhất. Mọi kết quả đều phải nằm trong PDP allow-list.
 - Nếu mã có nhiều bản ghi ở các scale benchmark, tên hệ thống/chủ đề trong câu hỏi được dùng để rerank; nếu chỉ nhập mã và chỉ có một tài liệu được phép, dùng đủ các chunk của tài liệu đó; nếu có nhiều tài liệu cùng mã trong phạm vi quyền, trả một chunk đại diện cho mỗi tài liệu để thể hiện sự trùng mã.
 - Nếu không có tài liệu đúng mã trong allow-list, hệ thống trả `NO_RESULT`, không đưa vector neighbor khác mã vào prompt.
 - LLM được yêu cầu trả lời bằng tiếng Việt; đầu ra có chữ Hán/Nhật/Hàn hoặc dấu hiệu tiếng Indonesia được sửa một lần. Nếu vẫn không đạt, truy vấn theo mã hồ sơ dùng câu trả lời trích xuất có kiểm soát từ chính chunk đã được phép hoặc thông báo fallback an toàn.
