@@ -41,7 +41,10 @@ KNOWN_ALLOWED_DISTRACTOR_DOC_ID = 7573
 
 @pytest.fixture()
 def db_conn():
-    config = _db_config()
+    try:
+        config = _db_config()
+    except RuntimeError as exc:
+        pytest.skip(f"Benchmark PostgreSQL chưa được cấu hình trong môi trường test: {exc}")
     conn = psycopg2.connect(**config)
     try:
         conn.set_session(readonly=True, autocommit=False)
