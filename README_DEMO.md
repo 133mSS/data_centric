@@ -9,6 +9,7 @@ Frontend local tối giản để trình bày project Data-Centric Security for 
 - Hỏi đáp: gọi `app.controlled_rag.answer_internal_query()` với `top_k=3`; context DLP được backend suy ra sau khi xác thực token. Entry point `answer_query()` vẫn dành cho benchmark và giữ `SHARE_SUMMARY`.
 - Hiển thị tài liệu nguồn đã được phép và trace kiểm soát theo `request_id`.
 - Danh mục tài liệu chỉ hiển thị những tài liệu PDP trả về `ALLOW` cho người đang đăng nhập.
+- Với câu hỏi có mã hồ sơ 5 chữ số, Retrieval chỉ sử dụng tài liệu được PDP cho phép và có đúng mã trong tiêu đề; không thay thế bằng hồ sơ khác chỉ vì gần nghĩa vector. Nếu không có tài liệu đúng mã trong phạm vi quyền, trả `NO_RESULT` và Output DLP không chạy.
 - Audit log chỉ hiển thị sự kiện của người dùng hiện tại; không hiển thị `query_text`.
 - Kết quả WP6/WP7/WP8/Benchmark được đọc từ các file JSON/CSV sẵn có trong `results/`.
 
@@ -54,10 +55,12 @@ Tài khoản Demo được lưu riêng trong `baomatdulieu_demo`. Sau khi tạo 
 2. Mở **Tổng quan** để chỉ ra role, department, clearance và số tài liệu được phép.
 3. Mở **Tài liệu được phép** để minh họa danh sách đã lọc qua PDP.
 4. Hỏi: `Mã nguồn hệ thống RAG` hoặc `policy_engine.py` bằng `nv_dev` — tài liệu #6 thuộc Nội bộ/Kỹ thuật nên được phép truy cập và không bị che trong `INTERNAL_ASSISTANT`.
-5. Hỏi: `Kế hoạch sáp nhập với công ty XYZ là gì?` bằng `nv_dev` — tài liệu Tối mật phải bị loại ở ABAC; không được đưa nội dung bị từ chối vào prompt.
-6. Thử `policy_engine.py` bằng tài khoản `partner_01` — phiên đối tác dùng `SHARE_SUMMARY`, đồng thời quyền ABAC vẫn giới hạn tài liệu; không được xem nội dung tài liệu nội bộ.
-7. Mở **Nhật ký kiểm soát** để xem context, quyết định `retrieval` và `output_dlp` của từng request.
-8. Mở **Kết quả thực nghiệm** để xem các số liệu WP6, Answer Leakage, Prompt Injection, Ablation và Benchmark đã lưu.
+5. Hỏi: `tìm thông tin về hồ sơ 00006` và `Access Service — Giám sát dịch vụ — hồ sơ 00006` — kết quả phải khớp đúng mã hồ sơ và tên hệ thống; không được thay bằng hồ sơ 00062/00042 hoặc hồ sơ khác.
+6. Hỏi một mã không tồn tại/không nằm trong phạm vi truy cập — kỳ vọng `NO_RESULT`, `Output DLP · NOT_RUN`, không lấy hồ sơ gần nghĩa để trả lời.
+7. Hỏi: `Kế hoạch sáp nhập với công ty XYZ là gì?` bằng `nv_dev` — tài liệu Tối mật phải bị loại ở ABAC; không được đưa nội dung bị từ chối vào prompt.
+8. Thử `policy_engine.py` bằng tài khoản `partner_01` — phiên đối tác dùng `SHARE_SUMMARY`, đồng thời quyền ABAC vẫn giới hạn tài liệu; không được xem nội dung tài liệu nội bộ.
+9. Mở **Nhật ký kiểm soát** để xem context, quyết định `retrieval` và `output_dlp` của từng request.
+10. Mở **Kết quả thực nghiệm** để xem các số liệu WP6, Answer Leakage, Prompt Injection, Ablation và Benchmark đã lưu.
 
 ## 5. Nguyên tắc an toàn và phạm vi
 
@@ -115,3 +118,12 @@ User PostgreSQL cần quyền CREATEDB để script tự tạo database. Nếu k
 Sau đó chạy `.\scripts\start_demo.ps1`. Demo server và `answer_internal_query()` đều bị pin vào `baomatdulieu_demo`. Danh mục tài liệu được tìm kiếm/phân trang ở backend (50 tài liệu/trang, tối đa 100) để tránh đẩy toàn bộ 16.000 dòng vào trình duyệt.
 
 Các test policy hiện có vẫn dùng `baomatdulieu`; retrieval integration tests vẫn chỉ đọc `baomatdulieu_benchmark`; Demo runtime dùng `baomatdulieu_demo`.
+
+
+### Chất lượng Retrieval và câu trả lời
+
+- Query có mã hồ sơ từ 5 chữ số trở lên được xử lý như exact lookup. Mã phải xuất hiện trong tiêu đề tài liệu; kết quả phải nằm trong PDP allow-list.
+- Nếu mã có nhiều bản ghi ở các scale benchmark, tên hệ thống/chủ đề trong câu hỏi được dùng để rerank; nếu chỉ nhập mã, trả một chunk đại diện cho mỗi tài liệu được phép để thể hiện khả năng trùng mã.
+- Nếu không có tài liệu đúng mã trong allow-list, hệ thống trả `NO_RESULT`, không đưa vector neighbor khác mã vào prompt.
+- LLM được yêu cầu trả lời bằng tiếng Việt; đầu ra có chữ Hán/Nhật/Hàn hoặc dấu hiệu tiếng Indonesia được sửa một lần. Nếu vẫn không đạt, truy vấn theo mã hồ sơ dùng câu trả lời trích xuất có kiểm soát từ chính chunk đã được phép hoặc thông báo fallback an toàn.
+- Benchmark v1 hiện là dữ liệu tổng hợp, không chứa nội dung nghiệp vụ chi tiết cho mọi chủ đề (ví dụ quy trình nghỉ phép/tuyển dụng). Không tìm thấy nội dung đó là giới hạn của corpus, không phải căn cứ để bỏ qua ABAC.
