@@ -308,5 +308,41 @@ class TestControlledRAG(unittest.TestCase):
         fake_conn.close.assert_called_once()
 
 
+    def test_internal_user_context_is_passed_to_output_dlp(self):
+        from controlled_rag import _answer_query_with_connection
+
+        fake_conn = MagicMock()
+        chunks = [
+            (10, 6, "Mã nguồn hệ thống RAG", "Nội bộ", "Kỹ thuật",
+             "Module policy_engine.py kiểm tra quyền truy cập.", 0.91, "TECHNICAL_SENSITIVE")
+        ]
+        user = {"id": 1, "username": "nv_dev", "role": "Nhân viên", "department": "Kỹ thuật"}
+        dlp_result = {
+            "decision": "ALLOW",
+            "answer": "Module policy_engine.py kiểm tra quyền truy cập.",
+            "matches": [],
+            "matched_count": 0,
+        }
+        with (
+            patch("controlled_rag.user_from_token", return_value=user),
+            patch("controlled_rag.vector_search", return_value=chunks),
+            patch("controlled_rag.get_last_denied_shadow_chunks", return_value=[]),
+            patch("controlled_rag.generate_answer", return_value=dlp_result["answer"]),
+            patch("controlled_rag.chunks_to_source_documents", return_value=[
+                {"document_id": 6, "text": chunks[0][5], "protection_profile": "TECHNICAL_SENSITIVE"}
+            ]),
+            patch("controlled_rag.process_output_safely", return_value=dlp_result) as dlp,
+            patch("controlled_rag.log_decision") as audit,
+        ):
+            result = _answer_query_with_connection(fake_conn, "signed-token", "Mã nguồn hệ thống RAG")
+
+        assert result["decision"] == "ALLOW"
+        assert result["release_context"] == "INTERNAL_ASSISTANT"
+        assert result["output_dlp_executed"] is True
+        dlp.assert_called_once()
+        assert dlp.call_args.kwargs["release_context"] == "INTERNAL_ASSISTANT"
+        assert all(call.kwargs.get("release_context") == "INTERNAL_ASSISTANT" for call in audit.call_args_list)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
