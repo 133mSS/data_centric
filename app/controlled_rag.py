@@ -190,9 +190,8 @@ def answer_internal_query(token: str, query: str, top_k: int = 3) -> dict:
         # One connection and one verified identity: do not resolve role in a
         # separate transaction and then reopen a connection for the request.
         with psycopg2.connect(**get_db_config()) as conn:
-            try:
-                user = user_from_token(conn, token)
-            except (AuthenticationError, RuntimeError):
+            user = _verified_user_from_token(conn, token)
+            if user is None:
                 return {
                     "answer": "Yêu cầu xác thực không hợp lệ hoặc đã hết hạn.",
                     "decision": "BLOCK", "retrieved_doc_ids": [],
