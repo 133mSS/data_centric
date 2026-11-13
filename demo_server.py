@@ -14,7 +14,7 @@ from collections import defaultdict, deque
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "demo_web"
@@ -36,10 +36,10 @@ DEFAULT_RELEASE_CONTEXT = "SHARE_SUMMARY"  # Unknown-role fallback; resolved rel
 
 
 def _db_config():
-    from db_config import get_db_config
-    config = get_db_config()
-    if config.get("dbname") != "baomatdulieu":
-        raise RuntimeError("Demo server must connect to application database 'baomatdulieu'.")
+    from db_config import get_demo_db_config
+    config = get_demo_db_config()
+    if config.get("dbname") != "baomatdulieu_demo":
+        raise RuntimeError("Demo server must connect to isolated database 'baomatdulieu_demo'.")
     return config
 
 
@@ -292,7 +292,8 @@ class DemoHandler(BaseHTTPRequestHandler):
                 if path == "/api/overview":
                     return self._overview(user)
                 if path == "/api/documents":
-                    return self._documents(user)
+                    params = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+                    return self._documents(user, params)
                 if path == "/api/audit":
                     return self._audit(user)
                 if path == "/api/experiments":
@@ -436,10 +437,39 @@ class DemoHandler(BaseHTTPRequestHandler):
                                 "allowed_chunks": chunks, "documents_by_classification": dict(by_class),
                                 "audit_last_24h": activity, "release_context": release_context})
 
-    def _documents(self, user):
+    def _documents(self, user, params=None):
+        params = params or {}
+        try:
+            page = max(1, int((params.get("page") or ["1"])[0]))
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            page_size = int((params.get("page_size") or ["50"])[0])
+        except (TypeError, ValueError):
+            page_size = 50
+        page_size = min(100, max(10, page_size))
+        query = str((params.get("q") or [""])[0]).strip()[:120].casefold()
+
         with _db_session() as conn:
             docs = self._allowed_documents(conn, user)
-        self._send_json({"documents": docs, "count": len(docs)})
+        if query:
+            docs = [doc for doc in docs if query in str(doc["title"]).casefold()]
+
+        total = len(docs)
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        page = min(page, total_pages)
+        start = (page - 1) * page_size
+        page_docs = docs[start:start + page_size]
+        self._send_json({
+            "documents": page_docs,
+            "count": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
+            "query": query,
+        })
 
     def _audit(self, user):
         with _db_session() as conn:
