@@ -5,9 +5,11 @@ import re
 import threading
 
 import requests
+import psycopg2
 
 from pep import enforce_access
 from retrieval import get_allowed_document_ids
+from db_config import get_db_config
 
 OLLAMA_URL = "http://localhost:11434/api/embeddings"
 _audit_state = threading.local()
