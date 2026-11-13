@@ -36,7 +36,7 @@ def test_exact_search_is_scoped_to_allowed_ids_and_precedes_semantic(monkeypatch
                              "Tìm thông tin hồ sơ 00038", top_k=3)
 
     assert rows[0] == exact
-    assert all(row[1] == 38 for row in rows)
+    assert rows[1] == semantic
     exact_sql = cursor.execute.call_args_list[0].args[0]
     assert "d.id = ANY(%s)" in exact_sql
     assert cursor.execute.call_args_list[0].args[1][0] == [38]
