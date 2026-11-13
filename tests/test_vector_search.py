@@ -256,8 +256,9 @@ def test_explicit_document_reference_is_retrieved_by_acl_filtered_title_lookup(m
     assert "WHERE c.document_id = ANY(%s)" in normalized_sql
     assert "POSITION(%s IN d.title) > 0" in normalized_sql
     assert lookup_params[1] == [10, 11]
-    assert "00038" in lookup_params
-    # Request filler such as "tìm thông tin về hồ sơ" is not required in the title.
+    assert lookup_params[2] == "00038"
+    assert lookup_params[3] >= 100
+    assert "tim" not in lookup_params  # Request filler is never a title constraint.
 
 
 
