@@ -5,7 +5,7 @@ Frontend local tối giản để trình bày project Data-Centric Security for 
 ## Chức năng
 
 - Đăng nhập bằng `username + password + TOTP` qua `app.auth.authenticate()`.
-- Tổng quan: database, Ollama, phạm vi tài liệu được phép theo PDP.
+- Tổng quan: trạng thái database Demo, Ollama và phạm vi tài liệu được phép theo PDP.
 - Hỏi đáp: gọi `app.controlled_rag.answer_internal_query()` với `top_k=3`; context DLP được backend suy ra sau khi xác thực token. Entry point `answer_query()` vẫn dành cho benchmark và giữ `SHARE_SUMMARY`.
 - Hiển thị tài liệu nguồn đã được phép và trace kiểm soát theo `request_id`.
 - Danh mục tài liệu chỉ hiển thị những tài liệu PDP trả về `ALLOW` cho người đang đăng nhập.
@@ -18,7 +18,7 @@ Frontend local tối giản để trình bày project Data-Centric Security for 
 - PostgreSQL/pgvector đang chạy; database Demo riêng tên `baomatdulieu_demo` đã được provision.
 - Ollama đang chạy và có hai model `qwen2.5:3b`, `nomic-embed-text`.
 - Tài khoản demo đã tồn tại trong bảng `users`, có `password_hash` bcrypt hợp lệ và `mfa_secret`.
-- Migration audit `database/init/05_audit.sql` đã được áp dụng vào database ứng dụng; module Controlled RAG cần các cột `request_id`, `stage`, `rule_id` và `release_context`.
+- Migration audit `database/init/05_audit.sql` đã được áp dụng vào `baomatdulieu_demo`; module Controlled RAG cần các cột `request_id`, `stage`, `rule_id` và `release_context`.
 - Corpus Demo được copy từ `baomatdulieu_benchmark` bằng `scripts/setup_demo_database.py`. Runtime Demo không chạy embedding generation và không ghi vào database benchmark.
 
 ## 2. Cài đặt / khởi động trên Windows PowerShell
@@ -46,7 +46,7 @@ Giữ cửa sổ PowerShell đang chạy server trong suốt buổi demo. Nhấn
 
 Dùng tài khoản fixture được cấp trong database, ví dụ `nv_dev`, `mgr_tech`, `mgr_sales`, `partner_01` hoặc `ceo_boss`. Mật khẩu là mật khẩu demo đã dùng khi provision; mã TOTP được tạo trong ứng dụng Authenticator tương ứng.
 
-Tài khoản Demo được lưu riêng trong `baomatdulieu_demo`. Sau khi tạo database, chạy `python .\\scripts\\seed_demo_users.py` để tạo 5 tài khoản và MFA riêng. Script hỏi mật khẩu an toàn (không echo) và chỉ xuất TOTP secrets/URI một lần. Nó từ chối thay đổi tài khoản đang tồn tại, trừ khi dùng `--rotate` có chủ đích. Không chạy `scripts/seed_users.py` để provision Demo.
+Tài khoản Demo được lưu riêng trong `baomatdulieu_demo`. Sau khi tạo database, chạy `python .\scripts\seed_demo_users.py` để tạo 5 tài khoản và MFA riêng. Script hỏi mật khẩu an toàn (không echo) và chỉ xuất TOTP secrets/URI một lần. Nó từ chối thay đổi tài khoản đang tồn tại, trừ khi dùng `--rotate` có chủ đích. Không chạy `scripts/seed_users.py` để provision Demo.
 
 ## 4. Luồng demo gợi ý trước giảng viên
 
@@ -71,11 +71,11 @@ Tài khoản Demo được lưu riêng trong `baomatdulieu_demo`. Sau khi tạo 
 
 ## 6. Xử lý lỗi thường gặp
 
-- **Không kết nối PostgreSQL:** kiểm tra Docker `docker compose ps`, `POSTGRES_PORT`, `POSTGRES_DB` và chạy lại `scripts/load_demo_env.ps1` trong cùng terminal.
+- **Không kết nối PostgreSQL:** kiểm tra Docker `docker compose ps`, `POSTGRES_PORT`, `DEMO_DB_NAME`, `BENCHMARK_DB_NAME` và chạy lại `scripts/load_demo_env.ps1` trong cùng terminal.
 - **Chưa có model Ollama:** chạy `ollama list`; nếu thiếu, pull model theo README project.
 - **Sai username/password/TOTP:** kiểm tra tài khoản fixture, mật khẩu dùng khi seed và thời gian đồng bộ trên ứng dụng Authenticator.
-- **Không có tài liệu nguồn:** kiểm tra bảng `documents`, `chunks`, embedding và quyền của người dùng; frontend không tự tạo dữ liệu.
-- **Lỗi audit column/request_id:** với volume PostgreSQL cũ, init scripts không tự chạy lại. Kiểm tra và áp dụng `database/init/05_audit.sql` vào đúng database `baomatdulieu` nếu migration chưa được chạy.
+- **Không có tài liệu nguồn:** kiểm tra bảng `documents`, `chunks`, embedding trong `baomatdulieu_demo` và quyền của người dùng; frontend không tự tạo dữ liệu.
+- **Lỗi audit column/request_id:** với volume PostgreSQL cũ, init scripts không tự chạy lại. Kiểm tra và áp dụng `database/init/05_audit.sql` vào đúng database `baomatdulieu_demo` nếu migration chưa được chạy.
 - **Câu trả lời bị BLOCK:** xem Security Trace và Audit Log; đây có thể là quyết định fail-closed của pipeline, không nên sửa thành ALLOW chỉ để demo.
 
 ## 7. Chạy kiểm thử trên Windows PowerShell
@@ -111,6 +111,6 @@ python .\scripts\seed_demo_users.py
 
 User PostgreSQL cần quyền CREATEDB để script tự tạo database. Nếu không có quyền đó, tạo database rỗng `baomatdulieu_demo` bằng tài khoản quản trị rồi chạy lại script. Script kiểm tra đúng nguồn/đích, chỉ copy documents/chunks/embeddings theo batch, tạo HNSW index và không copy benchmark users, MFA, audit, query cases hoặc kết quả thí nghiệm. Không có thao tác DROP/TRUNCATE.
 
-Sau đó chạy `.scriptsstart_demo.ps1`. Demo server và `answer_internal_query()` đều bị pin vào `baomatdulieu_demo`. Danh mục tài liệu được tìm kiếm/phân trang ở backend (50 tài liệu/trang, tối đa 100) để tránh đẩy toàn bộ 16.000 dòng vào trình duyệt.
+Sau đó chạy ` .\scripts\start_demo.ps1`. Demo server và `answer_internal_query()` đều bị pin vào `baomatdulieu_demo`. Danh mục tài liệu được tìm kiếm/phân trang ở backend (50 tài liệu/trang, tối đa 100) để tránh đẩy toàn bộ 16.000 dòng vào trình duyệt.
 
 Các test policy hiện có vẫn dùng `baomatdulieu`; retrieval integration tests vẫn chỉ đọc `baomatdulieu_benchmark`; Demo runtime dùng `baomatdulieu_demo`.
