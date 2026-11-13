@@ -31,7 +31,7 @@ def _verified_user_from_token(conn, token: str):
         return None
 
 def _answer_query_with_connection(
-    conn, token, query, top_k=3, *, release_context_override=None
+    conn, token, query, top_k=3, *, release_context_override=None, verified_user=None
 ):
     """Run controlled RAG after verifying a signed token.
 
@@ -39,7 +39,9 @@ def _answer_query_with_connection(
     It is deliberately not accepted by the public answer_query() function.
     """
     request_id = str(uuid4())
-    user = _verified_user_from_token(conn, token)
+    # The demo wrapper may pass the user it just verified in this same DB session;
+    # public/benchmark callers omit it and are authenticated here as before.
+    user = verified_user if verified_user is not None else _verified_user_from_token(conn, token)
     if user is None:
         return {
             "answer": "Yêu cầu xác thực không hợp lệ hoặc đã hết hạn.",
@@ -80,7 +82,7 @@ def _answer_query_with_connection(
         if not retrieved_chunks:
             conn.commit()
             return {
-                "answer": "Không tìm thấy tài liệu phù hợp trong phạm vi quyền truy cập.",
+                "answer": "Không có tài liệu được phép để trả lời.",
                 "decision": "NO_RESULT", "retrieved_doc_ids": [],
                 "request_id": request_id, "release_context": release_context,
                 "output_dlp_executed": False,
@@ -200,7 +202,8 @@ def answer_internal_query(token: str, query: str, top_k: int = 3) -> dict:
                 }
             context = release_context_for_user(user)
             return _answer_query_with_connection(
-                conn, token, query, top_k=top_k, release_context_override=context
+                conn, token, query, top_k=top_k,
+                release_context_override=context, verified_user=user,
             )
     except Exception:
         return {
