@@ -166,3 +166,53 @@ def test_false_no_result_for_found_record_uses_grounded_extractive_fallback():
     assert "Access Service — Giám sát dịch vụ — hồ sơ 00006" in result
     assert "đang giám sát dịch vụ" in result
     assert mock_post.call_count == 2
+
+
+def test_prompt_maps_full_document_codes_and_disambiguates_short_record_ids():
+    chunks = [
+        (1, 6, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Hồ sơ DOC-1000-00006: Access Service đang giám sát dịch vụ."),
+        (2, 1006, "Ops Console — Chất lượng dữ liệu — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Hồ sơ DOC-5000-00006: Ops Console đang xử lý chất lượng dữ liệu."),
+        (3, 6006, "Core Platform — Dự báo nhu cầu — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Hồ sơ DOC-10000-00006: Core Platform đang dự báo nhu cầu."),
+    ]
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {
+        "response": "Có ba hồ sơ cùng mã ngắn; vui lòng chọn mã DOC đầy đủ."
+    }
+
+    with patch("app.llm.requests.post", return_value=response) as mock_post:
+        generate_answer("Tìm thông tin hồ sơ 00006", chunks)
+
+    prompt = mock_post.call_args.kwargs["json"]["prompt"]
+    assert "[DOCUMENT #6 | REFERENCE CODE: DOC-1000-00006]" in prompt
+    assert "[DOCUMENT #1006 | REFERENCE CODE: DOC-5000-00006]" in prompt
+    assert "[DOCUMENT #6006 | REFERENCE CODE: DOC-10000-00006]" in prompt
+    assert "không nêu Document ID" in prompt
+    assert "Không nêu Document ID, phân loại bảo mật hoặc phòng ban" in prompt
+
+
+def test_prompt_limits_summary_to_requested_fields_and_avoids_redundant_plan_wording():
+    chunks = [
+        (1, 6, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật",
+         "Hồ sơ DOC-1000-00006: Nhóm phụ trách Vận hành; trạng thái đang lập kế hoạch; kỳ Q1/2026."),
+    ]
+    response = Mock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {
+        "response": "Hệ thống Access Service đang lập kế hoạch giám sát dịch vụ trong Q1/2026."
+    }
+
+    with patch("app.llm.requests.post", return_value=response) as mock_post:
+        generate_answer(
+            "Tóm tắt hồ sơ DOC-1000-00006, nêu nhóm phụ trách, trạng thái và kỳ kế hoạch.",
+            chunks,
+        )
+
+    prompt = mock_post.call_args.kwargs["json"]["prompt"]
+    assert "chỉ trình bày các trường được hỏi" in prompt
+    assert "Không nêu Document ID, phân loại bảo mật hoặc phòng ban trừ khi người dùng hỏi" in prompt
+    assert 'không viết "kế hoạch cho kế hoạch Q1/2026"' in prompt
