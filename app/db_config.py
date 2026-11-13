@@ -73,11 +73,10 @@ def get_benchmark_db_config():
         ("BENCHMARK_DB_USER", "POSTGRES_USER"),
         ("BENCHMARK_DB_PASSWORD", "POSTGRES_PASSWORD"),
     )
+    # Keep the default isolated benchmark database while allowing an explicit
+    # override for tests and separately provisioned benchmark environments.
+    # Benchmark jobs must still validate current_database() before any writes.
     database = os.getenv("BENCHMARK_DB_NAME", BENCHMARK_DATABASE_NAME)
-    if database != BENCHMARK_DATABASE_NAME:
-        raise RuntimeError(
-            f"Benchmark database must be {BENCHMARK_DATABASE_NAME!r}; got {database!r}."
-        )
     return {
         "host": os.getenv("BENCHMARK_DB_HOST", os.getenv("POSTGRES_HOST", "localhost")),
         "port": int(os.getenv("BENCHMARK_DB_PORT", os.getenv("POSTGRES_PORT", "5432"))),
