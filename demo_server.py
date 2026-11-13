@@ -32,7 +32,7 @@ _LOGIN_FAILURES: dict[str, deque[float]] = defaultdict(deque)
 ROLE_CLEARANCE = {"Đối tác": 0, "Nhân viên": 1, "Manager": 2, "Ban lãnh đạo": 3}
 CLASSIFICATION_LEVEL = {"Công khai": 0, "Nội bộ": 1, "Mật": 2, "Tối mật": 3}
 FIXTURE_USERS = ("nv_dev", "mgr_tech", "mgr_sales", "partner_01", "ceo_boss")
-RELEASE_CONTEXT = "SHARE_SUMMARY"  # Trusted backend constant; never accepted from browser input.
+DEFAULT_RELEASE_CONTEXT = "SHARE_SUMMARY"  # Fallback only; chat context is resolved by Controlled RAG.
 
 
 def _db_config():
@@ -488,7 +488,8 @@ class DemoHandler(BaseHTTPRequestHandler):
         dlp_rows = [r for r in logs if r[0] == "output_dlp"]
         dlp_matches = sum(int(r[4]) for r in dlp_rows if r[1] in {"REDACT", "BLOCK"})
         dlp_decision = result.get("decision", "BLOCK")
-        dlp_executed = bool(dlp_rows) or dlp_decision in {"ALLOW", "REDACT"}
+        release_context = result.get("release_context", DEFAULT_RELEASE_CONTEXT)
+        dlp_executed = bool(result.get("output_dlp_executed", bool(dlp_rows)))
         dlp_trace_decision = dlp_decision if dlp_executed else "NOT_RUN"
         trace = [
             {"stage": "Xác thực", "decision": "ALLOW", "detail": f"Danh tính {user['username']} đã được xác thực bằng token còn hiệu lực."},
@@ -497,14 +498,15 @@ class DemoHandler(BaseHTTPRequestHandler):
              "detail": (f"{len(sources)} tài liệu trong Top-K sau lọc ABAC; {denied} lượt ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."
                         if sources or denied else "Không tìm thấy chunk phù hợp trong phạm vi truy cập; đây không phải quyết định từ chối quyền.")},
             {"stage": "Output DLP", "decision": dlp_trace_decision,
-             "detail": (f"Ngữ cảnh phát hành cố định: {RELEASE_CONTEXT}. Số bản ghi match được audit: {dlp_matches}."
-                        if dlp_executed else "Không có tài liệu được phép sau retrieval; Output DLP không được gọi trong request này.")},
+             "detail": (f"Ngữ cảnh phát hành do backend xác định: {release_context}. Số bản ghi match được audit: {dlp_matches}."
+                        if dlp_executed else "Không có tài liệu được phép sau retrieval hoặc pipeline dừng an toàn; Output DLP không được gọi.")},
         ]
         self._send_json({"request_id": request_id, "answer": result.get("answer") or "Không có câu trả lời được phép phát hành.",
-                         "decision": dlp_decision, "output_dlp_executed": dlp_executed, "release_context": RELEASE_CONTEXT,
+                         "decision": dlp_decision, "output_dlp_executed": dlp_executed, "release_context": release_context,
                          "sources": sources, "trace": trace,
                          "retrieval": {"allowed_chunks_logged": allowed, "denied_candidate_occurrences": denied},
-                         "dlp_match_events": dlp_matches})
+                         "dlp_match_events": dlp_matches,
+                         "dlp_match_count": result.get("dlp_match_count", dlp_matches)})
 
 
 def main():
