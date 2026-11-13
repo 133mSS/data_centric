@@ -6,7 +6,7 @@ Frontend local tối giản để trình bày project Data-Centric Security for 
 
 - Đăng nhập bằng `username + password + TOTP` qua `app.auth.authenticate()`.
 - Tổng quan: database, Ollama, phạm vi tài liệu được phép theo PDP.
-- Hỏi đáp: gọi `app.controlled_rag.answer_query()` với `top_k=3`.
+- Hỏi đáp: gọi `app.controlled_rag.answer_internal_query()` với `top_k=3`; context DLP được backend suy ra sau khi xác thực token. Entry point `answer_query()` vẫn dành cho benchmark và giữ `SHARE_SUMMARY`.
 - Hiển thị tài liệu nguồn đã được phép và trace kiểm soát theo `request_id`.
 - Danh mục tài liệu chỉ hiển thị những tài liệu PDP trả về `ALLOW` cho người đang đăng nhập.
 - Audit log chỉ hiển thị sự kiện của người dùng hiện tại; không hiển thị `query_text`.
