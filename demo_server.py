@@ -490,10 +490,11 @@ class DemoHandler(BaseHTTPRequestHandler):
         dlp_decision = result.get("decision", "BLOCK")
         dlp_executed = bool(dlp_rows) or dlp_decision in {"ALLOW", "REDACT"}
         dlp_trace_decision = dlp_decision if dlp_executed else "NOT_RUN"
+        allowed_document_count = len({source["id"] for source in sources})
         trace = [
             {"stage": "Xác thực", "decision": "ALLOW", "detail": f"Danh tính {user['username']} đã được xác thực bằng token còn hiệu lực."},
             {"stage": "ABAC / Retrieval", "decision": "ALLOW" if sources else "DENY",
-             "detail": f"{len(sources)} tài liệu trong Top-K sau lọc ABAC; {denied} lượt ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."},
+             "detail": f"{allowed_document_count} tài liệu duy nhất trong Top-K sau lọc ABAC; {allowed} chunk được phép ghi audit; {denied} ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."},
             {"stage": "Output DLP", "decision": dlp_trace_decision,
              "detail": (f"Ngữ cảnh phát hành cố định: {RELEASE_CONTEXT}. Số bản ghi match được audit: {dlp_matches}."
                         if dlp_executed else "Không có tài liệu được phép sau retrieval; Output DLP không được gọi trong request này.")},
