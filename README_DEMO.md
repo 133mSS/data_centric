@@ -5,21 +5,22 @@ Frontend local tối giản để trình bày project Data-Centric Security for 
 ## Chức năng
 
 - Đăng nhập bằng `username + password + TOTP` qua `app.auth.authenticate()`.
-- Tổng quan: database, Ollama, phạm vi tài liệu được phép theo PDP.
-- Hỏi đáp: gọi `app.controlled_rag.answer_query()` với `top_k=3`.
+- Tổng quan: trạng thái database Demo, Ollama và phạm vi tài liệu được phép theo PDP.
+- Hỏi đáp: gọi `app.controlled_rag.answer_internal_query()` với `top_k=3`; context DLP được backend suy ra sau khi xác thực token. Entry point `answer_query()` vẫn dành cho benchmark và giữ `SHARE_SUMMARY`.
 - Hiển thị tài liệu nguồn đã được phép và trace kiểm soát theo `request_id`.
 - Danh mục tài liệu chỉ hiển thị những tài liệu PDP trả về `ALLOW` cho người đang đăng nhập.
+- Với câu hỏi có mã hồ sơ 5 chữ số, Retrieval chỉ sử dụng tài liệu được PDP cho phép và có đúng mã trong tiêu đề; không thay thế bằng hồ sơ khác chỉ vì gần nghĩa vector. Nếu không có tài liệu đúng mã trong phạm vi quyền, trả `NO_RESULT` và Output DLP không chạy.
 - Audit log chỉ hiển thị sự kiện của người dùng hiện tại; không hiển thị `query_text`.
 - Kết quả WP6/WP7/WP8/Benchmark được đọc từ các file JSON/CSV sẵn có trong `results/`.
 
 ## 1. Điều kiện
 
 - Python 3.11+ và dependencies của project.
-- PostgreSQL đang chạy, database ứng dụng tên `baomatdulieu`.
+- PostgreSQL/pgvector đang chạy; database Demo riêng tên `baomatdulieu_demo` đã được provision.
 - Ollama đang chạy và có hai model `qwen2.5:3b`, `nomic-embed-text`.
 - Tài khoản demo đã tồn tại trong bảng `users`, có `password_hash` bcrypt hợp lệ và `mfa_secret`.
-- Migration audit `database/init/05_audit.sql` đã được áp dụng vào database ứng dụng; module Controlled RAG cần các cột `request_id`, `stage`, `rule_id` và `release_context`.
-- Các chunk trong database ứng dụng đã có embedding. Nếu còn thiếu, kiểm tra chắc chắn `POSTGRES_DB=baomatdulieu`, sau đó chạy `python app/generate_embeddings.py` để tạo embedding cho các chunk chưa có vector. Lệnh này ghi vào database được cấu hình; tuyệt đối không để `POSTGRES_DB=baomatdulieu_benchmark` khi chạy.
+- Migration audit `database/init/05_audit.sql` đã được áp dụng vào `baomatdulieu_demo`; module Controlled RAG cần các cột `request_id`, `stage`, `rule_id` và `release_context`.
+- Corpus Demo được copy từ `baomatdulieu_benchmark` bằng `scripts/setup_demo_database.py`. Runtime Demo không chạy embedding generation và không ghi vào database benchmark.
 
 ## 2. Cài đặt / khởi động trên Windows PowerShell
 
@@ -46,23 +47,27 @@ Giữ cửa sổ PowerShell đang chạy server trong suốt buổi demo. Nhấn
 
 Dùng tài khoản fixture được cấp trong database, ví dụ `nv_dev`, `mgr_tech`, `mgr_sales`, `partner_01` hoặc `ceo_boss`. Mật khẩu là mật khẩu demo đã dùng khi provision; mã TOTP được tạo trong ứng dụng Authenticator tương ứng.
 
-Nếu backend báo fixture user hoặc MFA secret chưa có, hãy kiểm tra đúng database `baomatdulieu` trước. `scripts/seed_users.py` có thể provision 5 tài khoản app và 6 benchmark users, nhưng **mỗi lần chạy sẽ thay mật khẩu demo và xoay MFA secret cho toàn bộ 11 tài khoản**. Chỉ chạy khi chấp nhận việc đó; sau khi chạy cần cập nhật lại authenticator từ provisioning URI mới được in ra. Không chạy script seed chỉ để thử giao diện nếu tài khoản hiện tại vẫn dùng được.
+Tài khoản Demo được lưu riêng trong `baomatdulieu_demo`. Sau khi tạo database, chạy `python .\scripts\seed_demo_users.py` để tạo 5 tài khoản và MFA riêng. Script hỏi mật khẩu an toàn (không echo) và chỉ xuất TOTP secrets/URI một lần. Nó từ chối thay đổi tài khoản đang tồn tại, trừ khi dùng `--rotate` có chủ đích. Không chạy `scripts/seed_users.py` để provision Demo.
 
 ## 4. Luồng demo gợi ý trước giảng viên
 
 1. Đăng nhập bằng `nv_dev` và TOTP.
 2. Mở **Tổng quan** để chỉ ra role, department, clearance và số tài liệu được phép.
 3. Mở **Tài liệu được phép** để minh họa danh sách đã lọc qua PDP.
-4. Hỏi: `Quy trình xin nghỉ phép như thế nào?` — cho thấy luồng ALLOW bình thường.
-5. Hỏi: `Kế hoạch sáp nhập với công ty XYZ là gì?` bằng tài khoản `nv_dev` — cho thấy tài liệu vượt quyền không được trả về; phần audit chỉ hiển thị metadata quyết định, không hiển thị nội dung tài liệu bị từ chối.
-6. Mở **Nhật ký kiểm soát** để xem `retrieval` và `output_dlp`.
-7. Mở **Kết quả thực nghiệm** để xem các số liệu WP6, Answer Leakage, Prompt Injection, Ablation và Benchmark đã lưu.
+4. Hỏi: `Mã nguồn hệ thống RAG` hoặc `policy_engine.py` bằng `nv_dev` — tài liệu #6 thuộc Nội bộ/Kỹ thuật nên được phép truy cập và không bị che trong `INTERNAL_ASSISTANT`.
+5. Hỏi: `tìm thông tin về hồ sơ 00006` và `Access Service — Giám sát dịch vụ — hồ sơ 00006` — kết quả phải khớp đúng mã hồ sơ và tên hệ thống; không được thay bằng hồ sơ 00062/00042 hoặc hồ sơ khác.
+6. Hỏi một mã không tồn tại/không nằm trong phạm vi truy cập — kỳ vọng `NO_RESULT`, `Output DLP · NOT_RUN`, không lấy hồ sơ gần nghĩa để trả lời.
+7. Hỏi: `Kế hoạch sáp nhập với công ty XYZ là gì?` bằng `nv_dev` — tài liệu Tối mật phải bị loại ở ABAC; không được đưa nội dung bị từ chối vào prompt.
+8. Thử `policy_engine.py` bằng tài khoản `partner_01` — phiên đối tác dùng `SHARE_SUMMARY`, đồng thời quyền ABAC vẫn giới hạn tài liệu; không được xem nội dung tài liệu nội bộ.
+9. Mở **Nhật ký kiểm soát** để xem context, quyết định `retrieval` và `output_dlp` của từng request.
+10. Mở **Kết quả thực nghiệm** để xem các số liệu WP6, Answer Leakage, Prompt Injection, Ablation và Benchmark đã lưu.
 
 ## 5. Nguyên tắc an toàn và phạm vi
 
 - Server chỉ bind vào `127.0.0.1`; không mở ra mạng LAN hoặc Internet.
 - Không có chế độ bypass đăng nhập, không giả lập tài khoản, không cho browser tự chọn `release_context`.
-- `SHARE_SUMMARY` là release context cố định do backend gán, đúng với public controlled entrypoint hiện có.
+- Release context được backend suy ra từ role của user đã xác thực: `INTERNAL_ASSISTANT` cho Nhân viên/Manager/Ban lãnh đạo; `SHARE_SUMMARY` cho Đối tác và mọi role không xác định (fail closed). Browser không được gửi hoặc tự chọn release context.
+- Signed token có claim `aud` là tên database phát hành; token từ `baomatdulieu` không dùng được ở `baomatdulieu_demo`. Sau khi chuyển sang DB Demo, người dùng phải đăng nhập lại bằng tài khoản/MFA đã seed riêng trong DB Demo.
 - Token được giữ trong `sessionStorage` của tab và hết hạn theo cơ chế token hiện có (1 giờ).
 - Không ghi password, OTP, token hoặc raw answer vào console server.
 - Giao diện chỉ đọc; không có chức năng upload/xóa/sửa tài liệu hoặc chạy script thực nghiệm từ trình duyệt.
@@ -70,9 +75,55 @@ Nếu backend báo fixture user hoặc MFA secret chưa có, hãy kiểm tra đ�
 
 ## 6. Xử lý lỗi thường gặp
 
-- **Không kết nối PostgreSQL:** kiểm tra Docker `docker compose ps`, `POSTGRES_PORT`, `POSTGRES_DB` và chạy lại `scripts/load_demo_env.ps1` trong cùng terminal.
+- **Không kết nối PostgreSQL:** kiểm tra Docker `docker compose ps`, `POSTGRES_PORT`, `DEMO_DB_NAME`, `BENCHMARK_DB_NAME` và chạy lại `scripts/load_demo_env.ps1` trong cùng terminal.
 - **Chưa có model Ollama:** chạy `ollama list`; nếu thiếu, pull model theo README project.
 - **Sai username/password/TOTP:** kiểm tra tài khoản fixture, mật khẩu dùng khi seed và thời gian đồng bộ trên ứng dụng Authenticator.
-- **Không có tài liệu nguồn:** kiểm tra bảng `documents`, `chunks`, embedding và quyền của người dùng; frontend không tự tạo dữ liệu.
-- **Lỗi audit column/request_id:** với volume PostgreSQL cũ, init scripts không tự chạy lại. Kiểm tra và áp dụng `database/init/05_audit.sql` vào đúng database `baomatdulieu` nếu migration chưa được chạy.
+- **Không có tài liệu nguồn:** kiểm tra bảng `documents`, `chunks`, embedding trong `baomatdulieu_demo` và quyền của người dùng; frontend không tự tạo dữ liệu.
+- **Lỗi audit column/request_id:** với volume PostgreSQL cũ, init scripts không tự chạy lại. Kiểm tra và áp dụng `database/init/05_audit.sql` vào đúng database `baomatdulieu_demo` nếu migration chưa được chạy.
 - **Câu trả lời bị BLOCK:** xem Security Trace và Audit Log; đây có thể là quyết định fail-closed của pipeline, không nên sửa thành ALLOW chỉ để demo.
+
+## 7. Chạy kiểm thử trên Windows PowerShell
+
+Các test unit không cần PostgreSQL. Các test trong `tests/test_policy.py` cần database ứng dụng `baomatdulieu`; `tests/test_retrieval_postgres_integration.py` cần database benchmark `baomatdulieu_benchmark`.
+
+Để chạy đầy đủ các test tích hợp, nạp cấu hình từ `.env` trong cùng cửa sổ PowerShell trước khi gọi pytest:
+
+```powershell
+.\scripts\load_demo_env.ps1
+python -m py_compile .\app\controlled_rag.py .\demo_server.py
+python -m pytest -q
+```
+
+Nếu chưa nạp `POSTGRES_USER` và `POSTGRES_PASSWORD`, các fixture database sẽ được đánh dấu `SKIPPED` thay vì báo lỗi setup. Nếu đã nạp credentials mà PostgreSQL không kết nối được hoặc thiếu database/fixture, test tích hợp vẫn báo lỗi để không che giấu vấn đề môi trường.
+
+
+## 8. Database Demo quy mô lớn
+
+Giữ nguyên ba database theo đúng vai trò:
+
+- `baomatdulieu`: database ứng dụng và các test policy hiện có.
+- `baomatdulieu_benchmark`: nguồn benchmark, không để Demo ghi dữ liệu vào đây.
+- `baomatdulieu_demo`: bản corpus dành riêng cho UI, có users/MFA và audit riêng.
+
+Sau khi benchmark đã có 16.000 documents, 48.000 chunks và real embeddings:
+
+~~~powershell
+. .\scripts\load_demo_env.ps1
+python .\scripts\setup_demo_database.py
+python .\scripts\seed_demo_users.py
+~~~
+
+User PostgreSQL cần quyền CREATEDB để script tự tạo database. Nếu không có quyền đó, tạo database rỗng `baomatdulieu_demo` bằng tài khoản quản trị rồi chạy lại script. Script kiểm tra đúng nguồn/đích, chỉ copy documents/chunks/embeddings theo batch, tạo HNSW index và không copy benchmark users, MFA, audit, query cases hoặc kết quả thí nghiệm. Không có thao tác DROP/TRUNCATE.
+
+Sau đó chạy `.\scripts\start_demo.ps1`. Demo server và `answer_internal_query()` đều bị pin vào `baomatdulieu_demo`. Danh mục tài liệu được tìm kiếm/phân trang ở backend (50 tài liệu/trang, tối đa 100) để tránh đẩy toàn bộ 16.000 dòng vào trình duyệt.
+
+Các test policy hiện có vẫn dùng `baomatdulieu`; retrieval integration tests vẫn chỉ đọc `baomatdulieu_benchmark`; Demo runtime dùng `baomatdulieu_demo`.
+
+
+### Chất lượng Retrieval và câu trả lời
+
+- Query có mã hồ sơ từ 5 chữ số trở lên được xử lý như exact lookup. Mã ngắn (ví dụ `00038`) tìm theo tiêu đề và có thể trùng giữa các scale; mã đầy đủ `DOC-1000-00038` tìm trong nội dung tài liệu để định danh duy nhất. Mọi kết quả đều phải nằm trong PDP allow-list.
+- Nếu mã có nhiều bản ghi ở các scale benchmark, tên hệ thống/chủ đề trong câu hỏi được dùng để rerank; nếu chỉ nhập mã và chỉ có một tài liệu được phép, dùng đủ các chunk của tài liệu đó; nếu có nhiều tài liệu cùng mã trong phạm vi quyền, trả một chunk đại diện cho mỗi tài liệu để thể hiện sự trùng mã.
+- Nếu không có tài liệu đúng mã trong allow-list, hệ thống trả `NO_RESULT`, không đưa vector neighbor khác mã vào prompt.
+- LLM được yêu cầu trả lời bằng tiếng Việt; đầu ra có chữ Hán/Nhật/Hàn hoặc dấu hiệu tiếng Indonesia được sửa một lần. Nếu vẫn không đạt, truy vấn theo mã hồ sơ dùng câu trả lời trích xuất có kiểm soát từ chính chunk đã được phép hoặc thông báo fallback an toàn.
+- Benchmark v1 hiện là dữ liệu tổng hợp, không chứa nội dung nghiệp vụ chi tiết cho mọi chủ đề (ví dụ quy trình nghỉ phép/tuyển dụng). Không tìm thấy nội dung đó là giới hạn của corpus, không phải căn cứ để bỏ qua ABAC.

@@ -14,7 +14,7 @@ from collections import defaultdict, deque
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "demo_web"
@@ -32,14 +32,14 @@ _LOGIN_FAILURES: dict[str, deque[float]] = defaultdict(deque)
 ROLE_CLEARANCE = {"Đối tác": 0, "Nhân viên": 1, "Manager": 2, "Ban lãnh đạo": 3}
 CLASSIFICATION_LEVEL = {"Công khai": 0, "Nội bộ": 1, "Mật": 2, "Tối mật": 3}
 FIXTURE_USERS = ("nv_dev", "mgr_tech", "mgr_sales", "partner_01", "ceo_boss")
-RELEASE_CONTEXT = "SHARE_SUMMARY"  # Trusted backend constant; never accepted from browser input.
+DEFAULT_RELEASE_CONTEXT = "SHARE_SUMMARY"  # Unknown-role fallback; resolved release context comes from Controlled RAG.
 
 
 def _db_config():
-    from db_config import get_db_config
-    config = get_db_config()
-    if config.get("dbname") != "baomatdulieu":
-        raise RuntimeError("Demo server must connect to application database 'baomatdulieu'.")
+    from db_config import get_demo_db_config
+    config = get_demo_db_config()
+    if config.get("dbname") != "baomatdulieu_demo":
+        raise RuntimeError("Demo server must connect to isolated database 'baomatdulieu_demo'.")
     return config
 
 
@@ -111,7 +111,8 @@ def _experiment_summary() -> dict:
     injection = _json_file(injection_path) if injection_path else None
     ablation = _json_file(ablation_path) if ablation_path else None
 
-    wp6_rows = _read_csv(results / "wp6_retrieval_matrix_seed4206.csv")
+    wp6_path = _latest_file(results, "wp6_retrieval_matrix_seed4206*.csv")
+    wp6_rows = _read_csv(wp6_path) if wp6_path else []
     wp6 = None
     if wp6_rows:
         passed = sum(1 for row in wp6_rows if _truthy(row.get("pass", "")))
@@ -292,7 +293,8 @@ class DemoHandler(BaseHTTPRequestHandler):
                 if path == "/api/overview":
                     return self._overview(user)
                 if path == "/api/documents":
-                    return self._documents(user)
+                    params = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+                    return self._documents(user, params)
                 if path == "/api/audit":
                     return self._audit(user)
                 if path == "/api/experiments":
@@ -365,7 +367,8 @@ class DemoHandler(BaseHTTPRequestHandler):
             pass
         self._send_json({"database": db, "ollama": ollama,
                          "ready": db["ok"] and db.get("chunks_missing_embedding", 1) == 0
-                                  and ollama["llm_model"] and ollama["embedding_model"]})
+                                  and ollama["llm_model"] and ollama["embedding_model"],
+                         "note": "Kiểm tra dịch vụ và trạng thái dữ liệu demo; không thay thế kiểm thử bảo mật."})
 
     def _login(self, data):
         client = self.client_address[0]
@@ -429,14 +432,45 @@ class DemoHandler(BaseHTTPRequestHandler):
         by_class = defaultdict(int)
         for d in allowed:
             by_class[d["classification"]] += 1
+        from controlled_rag import release_context_for_user
+        release_context = release_context_for_user(user)
         return self._send_json({"user": _user_payload(user), "allowed_documents": len(allowed),
                                 "allowed_chunks": chunks, "documents_by_classification": dict(by_class),
-                                "audit_last_24h": activity, "release_context": RELEASE_CONTEXT})
+                                "audit_last_24h": activity, "release_context": release_context})
 
-    def _documents(self, user):
+    def _documents(self, user, params=None):
+        params = params or {}
+        try:
+            page = max(1, int((params.get("page") or ["1"])[0]))
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            page_size = int((params.get("page_size") or ["50"])[0])
+        except (TypeError, ValueError):
+            page_size = 50
+        page_size = min(100, max(10, page_size))
+        query = str((params.get("q") or [""])[0]).strip()[:120].casefold()
+
         with _db_session() as conn:
             docs = self._allowed_documents(conn, user)
-        self._send_json({"documents": docs, "count": len(docs)})
+        if query:
+            docs = [doc for doc in docs if query in str(doc["title"]).casefold()]
+
+        total = len(docs)
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        page = min(page, total_pages)
+        start = (page - 1) * page_size
+        page_docs = docs[start:start + page_size]
+        self._send_json({
+            "documents": page_docs,
+            "count": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
+            "query": query,
+        })
 
     def _audit(self, user):
         with _db_session() as conn:
@@ -460,13 +494,33 @@ class DemoHandler(BaseHTTPRequestHandler):
             return self._send_json({"error": "Câu hỏi tối đa 800 ký tự."}, 400)
         token = self._bearer()
         try:
-            from controlled_rag import answer_query
-            result = answer_query(token, query, top_k=3)
+            from controlled_rag import answer_internal_query
+            result = answer_internal_query(token, query, top_k=3)
         except Exception:
             return self._send_json({"error": "Không thể xử lý câu hỏi qua Controlled RAG."}, 503)
 
         request_id = result.get("request_id")
         doc_ids = result.get("retrieved_doc_ids") or []
+        if result.get("decision") == "BLOCK" and not result.get("output_dlp_executed", False):
+            return self._send_json({
+                "request_id": request_id,
+                "answer": result.get("answer") or "Không thể xử lý yêu cầu một cách an toàn.",
+                "decision": "BLOCK",
+                "output_dlp_executed": False,
+                "release_context": result.get("release_context", DEFAULT_RELEASE_CONTEXT),
+                "sources": [],
+                "trace": [
+                    {"stage": "Xác thực", "decision": "ALLOW",
+                     "detail": f"Danh tính {user['username']} đã được xác thực bằng token còn hiệu lực."},
+                    {"stage": "ABAC / Retrieval", "decision": "ERROR",
+                     "detail": "Pipeline không hoàn tất retrieval; hệ thống dừng an toàn và không phát hành nội dung."},
+                    {"stage": "Output DLP", "decision": "NOT_RUN",
+                     "detail": "Output DLP chưa được gọi vì pipeline dừng trước bước sinh/phát hành câu trả lời."},
+                ],
+                "retrieval": {"allowed_chunks_logged": 0, "denied_candidate_occurrences": 0},
+                "dlp_match_events": 0,
+                "dlp_match_count": 0,
+            })
         with _db_session() as conn:
             from pdp import decide
             with conn.cursor() as cur:
@@ -488,21 +542,31 @@ class DemoHandler(BaseHTTPRequestHandler):
         dlp_rows = [r for r in logs if r[0] == "output_dlp"]
         dlp_matches = sum(int(r[4]) for r in dlp_rows if r[1] in {"REDACT", "BLOCK"})
         dlp_decision = result.get("decision", "BLOCK")
-        dlp_executed = bool(dlp_rows) or dlp_decision in {"ALLOW", "REDACT"}
+        release_context = result.get("release_context", DEFAULT_RELEASE_CONTEXT)
+        dlp_executed = bool(result.get("output_dlp_executed", bool(dlp_rows)))
         dlp_trace_decision = dlp_decision if dlp_executed else "NOT_RUN"
+        retrieval_decision = "ALLOW" if sources else ("DENY" if denied > 0 else "NO_RESULT")
+        if dlp_decision == "NO_RESULT":
+            retrieval_decision = "NO_RESULT"
+        elif dlp_decision == "BLOCK" and not dlp_executed and not sources and denied == 0:
+            retrieval_decision = "ERROR"
         trace = [
             {"stage": "Xác thực", "decision": "ALLOW", "detail": f"Danh tính {user['username']} đã được xác thực bằng token còn hiệu lực."},
-            {"stage": "ABAC / Retrieval", "decision": "ALLOW" if sources else "DENY",
-             "detail": f"{len(sources)} tài liệu trong Top-K sau lọc ABAC; {denied} lượt ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."},
+            {"stage": "ABAC / Retrieval",
+             "decision": retrieval_decision,
+             "detail": (f"{len(sources)} tài liệu trong Top-K sau lọc ABAC; {denied} lượt ứng viên trái quyền bị loại khỏi đường sinh câu trả lời."
+                        if sources or denied else "Không tìm thấy chunk phù hợp trong phạm vi truy cập; đây không phải quyết định từ chối quyền.")},
             {"stage": "Output DLP", "decision": dlp_trace_decision,
-             "detail": (f"Ngữ cảnh phát hành cố định: {RELEASE_CONTEXT}. Số bản ghi match được audit: {dlp_matches}."
-                        if dlp_executed else "Không có tài liệu được phép sau retrieval; Output DLP không được gọi trong request này.")},
+             "detail": (f"Ngữ cảnh phát hành do backend xác định: {release_context}. Số bản ghi match được audit: {dlp_matches}."
+                        if dlp_executed else "Output DLP không được gọi vì không có kết quả retrieval hoặc pipeline dừng an toàn.")},
         ]
         self._send_json({"request_id": request_id, "answer": result.get("answer") or "Không có câu trả lời được phép phát hành.",
-                         "decision": dlp_decision, "output_dlp_executed": dlp_executed, "release_context": RELEASE_CONTEXT,
+                         "decision": dlp_decision, "output_dlp_executed": dlp_executed, "release_context": release_context,
                          "sources": sources, "trace": trace,
                          "retrieval": {"allowed_chunks_logged": allowed, "denied_candidate_occurrences": denied},
-                         "dlp_match_events": dlp_matches})
+                         "dlp_match_events": dlp_matches,
+                         "dlp_match_count": result.get("dlp_match_count", dlp_matches),
+                         "note": "Release context ảnh hưởng quyết định Output DLP; phạm vi tài liệu vẫn do ABAC/PDP quyết định."})
 
 
 def main():

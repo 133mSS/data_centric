@@ -31,20 +31,25 @@ os.environ["SECRET_KEY"] = "test-secret-key-at-least-32-bytes-long"
 import auth
 
 class Cursor:
-    def __init__(self, row): self.row = row; self.sql = ""
+    def __init__(self, row, database): self.row = row; self.database = database; self.sql = ""
     def __enter__(self): return self
     def __exit__(self, *args): pass
-    def execute(self, sql, params): self.sql = sql
+    def execute(self, sql, params=None):
+        self.sql = sql
+        if "current_database()" in sql:
+            self.row = (self.database,)
     def fetchone(self): return self.row
 
 class Connection:
-    def __init__(self, row): self.row = row
-    def cursor(self): return Cursor(self.row)
+    def __init__(self, row, database="test_db"): self.row = row; self.database = database
+    def cursor(self): return Cursor(self.row, self.database)
 
 USER_ROW = (7, "hashed-password", "JBSWY3DPEHPK3PXP")
 DB_USER_ROW = (7, "nv_dev", "Nhân viên", "Kỹ thuật")
 
 def token_for(payload):
+    payload = dict(payload)
+    payload.setdefault("aud", "test_db")
     segment = auth._b64encode(json.dumps(payload, separators=(",", ":")).encode())
     return f"{segment}.{auth._sign(segment)}"
 
@@ -81,3 +86,18 @@ def test_role_and_department_are_not_taken_from_token():
     user = auth.user_from_token(Connection(DB_USER_ROW), token)
     assert user["role"] == "Nhân viên"
     assert user["department"] == "Kỹ thuật"
+
+
+
+def test_token_cannot_be_replayed_across_databases():
+    token = auth.authenticate(
+        Connection(USER_ROW, database="baomatdulieu"),
+        "nv_dev",
+        "hashed-password",
+        "123456",
+    )
+    with pytest.raises(auth.AuthenticationError, match="audience"):
+        auth.user_from_token(
+            Connection(DB_USER_ROW, database="baomatdulieu_demo"),
+            token,
+        )

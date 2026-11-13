@@ -90,7 +90,7 @@ def _fixture_document_id():
         raise RuntimeError("Cannot verify WP7 indirect-injection fixture") from exc
     if row is None:
         raise RuntimeError(
-            "Missing WP7 fixture; apply database/init/07_wp7_prompt_injection_fixture.sql"
+            "Missing WP7 fixture in the application database; apply database/init/06_wp7_prompt_injection_fixture.sql to the database selected by get_db_config() (baomatdulieu), not baomatdulieu_demo."
         )
     doc_id, classification, profile, chunk_count, embedded_chunk_count = row
     if classification != "Công khai" or profile != "PUBLIC":

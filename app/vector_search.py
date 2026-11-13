@@ -1,6 +1,7 @@
 import psycopg2
 import requests
 import threading
+import re
 
 from retrieval import get_allowed_document_ids
 from pep import enforce_access
@@ -90,10 +91,87 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     if not allowed_document_ids:
         return [], denied_shadow_chunks
 
-    # Controlled retrieval remains ACL-filtered before ranking/top-k.
+    # Controlled retrieval remains ACL-filtered before ranking. Fetch a bounded
+    # candidate pool, then rerank it with title/query lexical relevance.
+    # ABAC is applied in SQL before candidate generation; this never broadens access.
+    # Use a wider, still bounded vector candidate pool so title-aware reranking
+    # has a realistic chance to recover exact-document questions.
+    candidate_k = min(max(top_k * 10, 50), 100)
+    candidate_sql = """
+        SELECT c.id AS chunk_id, c.document_id, d.title,
+               d.classification, d.department, c.content,
+               1 - (c.embedding <=> %s::vector) AS similarity,
+               d.protection_profile
+        FROM chunks c
+        JOIN documents d ON c.document_id = d.id
+        WHERE c.document_id = ANY(%s)
+          AND c.embedding IS NOT NULL
+        ORDER BY c.embedding <=> %s::vector
+        LIMIT %s
+    """
     with conn.cursor() as cur:
         cur.execute(
-            """
+            candidate_sql,
+            (query_vector, allowed_document_ids, query_vector, candidate_k),
+        )
+        vector_candidates = cur.fetchall()
+
+    def _terms(value):
+        # Vietnamese diacritics are preserved; ignore very short tokens.
+        return {
+            token for token in re.findall(r"[0-9A-Za-zÀ-ỹ_]+", (value or "").casefold())
+            if len(token) >= 2
+        }
+
+    def _strip_vietnamese_diacritics(value):
+        import unicodedata
+        decomposed = unicodedata.normalize("NFD", (value or "").casefold())
+        return "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn").replace("đ", "d")
+
+    # Remove request filler before comparing query terms with document titles.
+    # Keep the original token spelling for PostgreSQL substring matching so
+    # Vietnamese diacritics are respected by ILIKE/POSITION.
+    stopwords = {
+        "cho", "toi", "thong", "tin", "ve", "so", "ho", "tai", "lieu",
+        "duoc", "cung", "cap", "nhu", "the", "nao", "la", "gi", "cua",
+        "va", "trong", "mot", "cac", "nhung", "hay", "giup", "biet",
+        "tim", "tra", "cuu", "kiem", "vui", "long", "ban", "theo", "doc",
+    }
+    query_terms = _terms(query)
+    title_search_terms = sorted({
+        term for term in query_terms
+        if _strip_vietnamese_diacritics(term) not in stopwords
+        and not re.fullmatch(r"\d+", term)
+    })
+
+    # Supplement vector candidates with a parameterized, ACL-filtered title
+    # lookup. This is important for explicit document IDs/titles, which may be
+    # absent from the first approximate-nearest-neighbour window. It never
+    # searches outside the allow-list returned by PDP.
+    full_reference_codes = re.findall(
+        r"(?<![A-Z0-9])DOC-\d{4,}-\d{5,}(?!\d)",
+        query,
+        flags=re.IGNORECASE,
+    )
+    reference_ids = re.findall(r"(?<!\d)\d{5,}(?!\d)", query)
+    has_record_reference = bool(full_reference_codes or reference_ids)
+    title_candidates = []
+    if has_record_reference:
+        # A full DOC-scale-record code is globally unique in the synthetic
+        # corpus and is stored in documents.content/chunks.content. A short
+        # five-digit ID is repeated between scales, so search title and rerank
+        # by the other title terms. Both paths remain inside the PDP allow-list.
+        if full_reference_codes:
+            reference_conditions = " OR ".join(
+                ["POSITION(%s IN d.content) > 0"] * len(full_reference_codes)
+            )
+            reference_values = full_reference_codes
+        else:
+            reference_conditions = " OR ".join(
+                ["POSITION(%s IN d.title) > 0"] * len(reference_ids)
+            )
+            reference_values = reference_ids
+        title_sql = f"""
             SELECT c.id AS chunk_id, c.document_id, d.title,
                    d.classification, d.department, c.content,
                    1 - (c.embedding <=> %s::vector) AS similarity,
@@ -102,13 +180,92 @@ def vector_search_with_audit(conn, user, query, top_k=3):
             JOIN documents d ON c.document_id = d.id
             WHERE c.document_id = ANY(%s)
               AND c.embedding IS NOT NULL
-            ORDER BY c.embedding <=> %s::vector
+              AND ({reference_conditions})
+            ORDER BY c.document_id, c.id
             LIMIT %s
-            """,
-            (query_vector, allowed_document_ids, query_vector, top_k),
-        )
-        authorized_chunks = cur.fetchall()
+        """
+        with conn.cursor() as cur:
+            cur.execute(
+                title_sql,
+                (query_vector, allowed_document_ids, *reference_values, max(candidate_k, 100)),
+            )
+            title_candidates = cur.fetchall()
 
+    # An explicit record number is a hard retrieval constraint. Never fall
+    # back to semantically similar but differently numbered records.
+    if has_record_reference:
+        if not title_candidates:
+            return [], denied_shadow_chunks
+        candidates = title_candidates
+    else:
+        # De-duplicate chunks present in the vector candidate pool.
+        candidates_by_id = {row[0]: row for row in vector_candidates}
+        candidates = list(candidates_by_id.values())
+
+    # Every candidate here is already restricted by the PDP allow-list.
+    title_candidate_ids = {row[0] for row in title_candidates}
+
+    query_terms_folded = {
+        _strip_vietnamese_diacritics(t)
+        for t in title_search_terms
+    }
+    meaningful_query_phrase = " ".join(title_search_terms)
+    meaningful_query_phrase = _strip_vietnamese_diacritics(meaningful_query_phrase)
+    ranked = []
+    for row in candidates:
+        title = str(row[2] or "")
+        title_terms = _terms(title)
+        title_terms_folded = {_strip_vietnamese_diacritics(t) for t in title_terms}
+        overlap = len(query_terms_folded & title_terms_folded)
+        title_phrase = _strip_vietnamese_diacritics(title)
+        # Compare the meaningful query tokens after request filler is removed.
+        exact_phrase = bool(meaningful_query_phrase) and meaningful_query_phrase in title_phrase
+        title_coverage = overlap / max(1, len(query_terms_folded))
+        title_coverage = min(title_coverage, 1.0)
+        has_reference_id = any(reference_id in title for reference_id in reference_ids)
+        # For explicit record-number lookups, lexical/title relevance must
+        # dominate a noisy embedding score. ABAC was applied before this stage.
+        vector_similarity = float(row[6] or 0.0)
+        if has_record_reference:
+            lexical_boost = (
+                (0.30 if exact_phrase else 0.0)
+                + title_coverage * 0.40
+                + (0.35 if has_reference_id else 0.0)
+                + (0.45 if row[0] in title_candidate_ids else 0.0)
+            )
+            # When the user supplies descriptive title terms, lexical match is
+            # primary; vector similarity is only a tie-breaker. A nearby vector
+            # must not override an exact record title.
+            primary_score = lexical_boost + vector_similarity * (
+                1.0 if not title_search_terms else 0.10
+            )
+        else:
+            lexical_boost = (0.12 if exact_phrase else 0.0) + title_coverage * 0.16
+            primary_score = vector_similarity + lexical_boost
+        ranked.append((primary_score, vector_similarity, row))
+
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    if has_record_reference and not title_search_terms:
+        # A bare repeated ID can map to several generated scales. If only one
+        # allowed document has that ID, retain all its chunks for a stable,
+        # complete summary. If multiple allowed documents share it, return one
+        # representative chunk per document so the LLM can explain ambiguity.
+        document_ids_in_rank_order = list(dict.fromkeys(item[2][1] for item in ranked))
+        if len(document_ids_in_rank_order) == 1:
+            authorized_chunks = [item[2] for item in ranked[:top_k]]
+        else:
+            authorized_chunks = []
+            seen_documents = set()
+            for item in ranked:
+                document_id = item[2][1]
+                if document_id in seen_documents:
+                    continue
+                seen_documents.add(document_id)
+                authorized_chunks.append(item[2])
+                if len(authorized_chunks) >= top_k:
+                    break
+    else:
+        authorized_chunks = [item[2] for item in ranked[:top_k]]
     return authorized_chunks, denied_shadow_chunks
 
 

@@ -15,8 +15,12 @@ from db_config import get_db_config
 
 @pytest.fixture(scope="module")
 def db_conn():
-    """Kết nối PostgreSQL dùng chung cho các test trong module."""
-    conn = psycopg2.connect(**get_db_config())
+    """Kết nối PostgreSQL app DB; skip rõ ràng nếu credentials chưa được nạp."""
+    try:
+        config = get_db_config()
+    except RuntimeError as exc:
+        pytest.skip(f"PostgreSQL app DB chưa được cấu hình trong môi trường test: {exc}")
+    conn = psycopg2.connect(**config)
     try:
         yield conn
     finally:

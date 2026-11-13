@@ -1,5 +1,6 @@
-# Load only the environment needed by the local demo web server.
-# This intentionally does not prompt for SEED_DEMO_PASSWORD and never prints secrets.
+# Load local project credentials without printing their values.
+# Demo traffic uses baomatdulieu_demo; POSTGRES_DB remains the app DB used by
+# existing tools and by docker-compose initialization.
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $Root ".env"
@@ -22,6 +23,10 @@ Get-Content $EnvFile | ForEach-Object {
 $required = @("POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "SECRET_KEY")
 $missing = @($required | Where-Object { -not [Environment]::GetEnvironmentVariable($_, "Process") })
 if ($missing.Count -gt 0) { throw "Thieu bien cau hinh demo: $($missing -join ', ')" }
-if ($env:POSTGRES_DB -ne "baomatdulieu") { throw "DEMO chi duoc phep ket noi database baomatdulieu; hien tai POSTGRES_DB khong hop le." }
+if ($env:POSTGRES_DB -ne "baomatdulieu") { throw "POSTGRES_DB phai giu la baomatdulieu; Demo su dung DEMO_DB_NAME rieng." }
+if (-not $env:DEMO_DB_NAME) { $env:DEMO_DB_NAME = "baomatdulieu_demo" }
+if ($env:DEMO_DB_NAME -ne "baomatdulieu_demo") { throw "DEMO_DB_NAME phai la baomatdulieu_demo." }
+if (-not $env:BENCHMARK_DB_NAME) { $env:BENCHMARK_DB_NAME = "baomatdulieu_benchmark" }
+if ($env:BENCHMARK_DB_NAME -ne "baomatdulieu_benchmark") { throw "BENCHMARK_DB_NAME phai la baomatdulieu_benchmark." }
 if ($env:SECRET_KEY.Length -lt 32) { throw "SECRET_KEY phai co toi thieu 32 bytes." }
-Write-Host "Da nap cau hinh cho demo local. Gia tri bi mat khong duoc in ra." 
+Write-Host "Da nap cau hinh Demo va Benchmark. Gia tri bi mat khong duoc in ra."

@@ -83,13 +83,13 @@
         </div>
         <div class="overview-columns">
           <article class="panel classification-panel"><div class="panel-heading"><div><p class="eyebrow">ACCESS SCOPE</p><h3>Phân loại tài liệu được phép</h3></div><span class="panel-tag">ABAC / PDP</span></div><div id="classification-bars" class="classification-bars"><p class="empty-state">Đang tải phạm vi truy cập…</p></div></article>
-          <article class="panel policy-panel"><div class="panel-heading"><div><p class="eyebrow">POLICY FLOW</p><h3>Hai ranh giới bảo vệ</h3></div></div><div class="policy-steps"><div class="policy-step"><span>01</span><div><b>ABAC trước Retrieval</b><small>Lọc tài liệu theo role, clearance và department.</small></div></div><div class="policy-step"><span>02</span><div><b>Output DLP trước phát hành</b><small>ALLOW, REDACT hoặc BLOCK theo SHARE_SUMMARY.</small></div></div><div class="policy-step"><span>03</span><div><b>Audit Log</b><small>Ghi nhận quyết định ở retrieval và output_dlp.</small></div></div></div></article>
+          <article class="panel policy-panel"><div class="panel-heading"><div><p class="eyebrow">POLICY FLOW</p><h3>Hai ranh giới bảo vệ</h3></div></div><div class="policy-steps"><div class="policy-step"><span>01</span><div><b>ABAC trước Retrieval</b><small>Lọc tài liệu theo role, clearance và department.</small></div></div><div class="policy-step"><span>02</span><div><b>Output DLP trước phát hành</b><small>INTERNAL_ASSISTANT cho hỏi đáp nội bộ; SHARE_SUMMARY cho luồng chia sẻ.</small></div></div><div class="policy-step"><span>03</span><div><b>Audit Log</b><small>Ghi nhận quyết định ở retrieval và output_dlp.</small></div></div></div></article>
         </div>
         <div id="fixture-warning" class="notice notice-warning hidden"></div>
       </section>
 
       <section id="page-chat" class="page">
-        <div class="page-intro"><div><p class="eyebrow">CONTROLLED RAG</p><h2>Hỏi đáp trên tài liệu được phép</h2><p>Câu hỏi được xử lý qua backend Controlled RAG; giao diện không tự chọn release context.</p></div><span class="context-lock">🔒 SHARE_SUMMARY · TRUSTED BACKEND</span></div>
+        <div class="page-intro"><div><p class="eyebrow">CONTROLLED RAG</p><h2>Hỏi đáp trên tài liệu được phép</h2><p>Backend xác thực danh tính, lọc tài liệu bằng ABAC rồi áp dụng Output DLP theo ngữ cảnh phiên.</p></div><span class="context-lock" id="context-lock">🔒 Đang xác định chính sách…</span></div>
         <div class="chat-policy-note"><b>Lưu ý:</b> DLP · ALLOW chỉ có nghĩa câu trả lời được phép phát hành theo policy; không xác nhận câu trả lời đúng hoặc đủ căn cứ từ tài liệu.</div>
         <div class="chat-layout">
           <section class="panel chat-panel">
@@ -103,7 +103,7 @@
 
       <section id="page-documents" class="page">
         <div class="page-intro"><div><p class="eyebrow">AUTHORIZED DATA</p><h2>Tài liệu được phép truy cập</h2><p>Danh sách chỉ gồm tài liệu mà PDP trả về ALLOW cho tài khoản đang đăng nhập.</p></div><span class="panel-tag">FILTERED BY PDP</span></div>
-        <div class="panel table-panel"><div class="table-toolbar"><b id="documents-count">Tài liệu</b><input id="document-filter" class="table-search" placeholder="Tìm theo tên tài liệu…"></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Tên tài liệu</th><th>Phân loại</th><th>Phòng ban</th><th>Protection Profile</th><th>Chunks</th></tr></thead><tbody id="documents-body"><tr><td colspan="6" class="empty-state">Đang tải…</td></tr></tbody></table></div></div>
+        <div class="panel table-panel"><div class="table-toolbar"><b id="documents-count">Tài liệu</b><input id="document-filter" class="table-search" placeholder="Tìm theo tên tài liệu…" aria-label="Tìm tài liệu theo tiêu đề"></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>Tên tài liệu</th><th>Phân loại</th><th>Phòng ban</th><th>Protection Profile</th><th>Chunks</th></tr></thead><tbody id="documents-body"><tr><td colspan="6" class="empty-state">Đang tải…</td></tr></tbody></table></div><div class="documents-pagination"><span id="documents-page-info">Trang 1</span><div><button type="button" id="documents-prev" class="pagination-button" disabled>Trước</button><button type="button" id="documents-next" class="pagination-button" disabled>Tiếp</button></div></div></div>
       </section>
 
       <section id="page-audit" class="page">

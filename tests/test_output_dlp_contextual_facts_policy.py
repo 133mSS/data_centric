@@ -99,6 +99,28 @@ def test_ctx_10_internal_assistant_preserves_answer_even_when_uncertain():
     assert result["uncertain_count"] == 1
 
 
+def test_ctx_14_internal_assistant_preserves_technical_filename_for_authorized_source():
+    source = {
+        "document_id": 6,
+        "text": "Tài liệu kỹ thuật nội bộ mô tả module policy_engine.py.",
+    }
+    answer = "Module policy_engine.py kiểm tra clearance và department trước retrieval."
+    result = run(answer, source, "INTERNAL_ASSISTANT")
+    assert result["decision"] == "ALLOW"
+    assert result["answer"] == answer
+
+
+def test_ctx_15_share_summary_redacts_technical_filename_for_same_source():
+    source = {
+        "document_id": 6,
+        "text": "Tài liệu kỹ thuật nội bộ mô tả module policy_engine.py.",
+    }
+    answer = "Module policy_engine.py kiểm tra clearance và department trước retrieval."
+    result = run(answer, source, "SHARE_SUMMARY")
+    assert result["decision"] == "REDACT"
+    assert "policy_engine.py" not in result["answer"]
+
+
 def test_ctx_11_sensitive_signal_wins_over_benign_signal():
     answer = "Ví dụ tài chính về kế hoạch sáp nhập có giá trị 45 triệu USD."
     result = run(answer)

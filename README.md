@@ -116,3 +116,45 @@ All benchmark v1 data generation, embedding, query-case creation, retrieval exec
 - Exact-substring and structured-fact matching can miss paraphrase, semantic disclosure, and obfuscation. Zero observed matches in finite tests does not establish zero real-world leakage.
 - The leadership override is an explicit business-policy exception in this project and is not strict Bell–LaPadula enforcement for every role.
 - Keep `results/archive/` as historical evidence; do not mix results from different test cases/configurations without identifying their run IDs.
+
+## Demo DLP release contexts
+
+The local chat demo derives its Output DLP release context on the backend from the role loaded through the verified authentication token:
+- `Nhân viên`, `Manager`, and `Ban lãnh đạo` use `INTERNAL_ASSISTANT` for internal Q&A.
+- `Đối tác` and unknown roles use `SHARE_SUMMARY` (fail-closed default).
+- The browser cannot choose or override the release context.
+- ABAC/PDP remains the authorization boundary for document retrieval. `INTERNAL_ASSISTANT` does not expand the user's document permissions; it only changes the post-generation release policy for content that was already retrieved after ABAC filtering.
+- `SHARE_SUMMARY` continues to redact confirmed protected matches and block uncertain configured summaries.
+
+Run `python -m pytest -q` after pulling the demo branch. The regression tests cover role-to-context routing, technical filename redaction in share context, internal release, and no-result handling.
+
+
+## 5. Local Demo database (separate from benchmark)
+
+The interactive Demo uses a third database, baomatdulieu_demo. It is deliberately isolated from both the original application database and the benchmark database.
+
+- baomatdulieu remains unchanged and is still used by existing application-policy tests/tools.
+- baomatdulieu_benchmark remains the source of benchmark data and results.
+- baomatdulieu_demo receives a copy of documents, chunks and real embeddings only. It has separate users, MFA secrets and audit rows.
+
+After the benchmark corpus has 16,000 documents, 48,000 chunks and 48,000 real embeddings, run:
+
+~~~powershell
+. .\scripts\load_demo_env.ps1
+python .\scripts\setup_demo_database.py
+python .\scripts\seed_demo_users.py
+~~~
+
+The database creation script requires CREATEDB permission. It creates baomatdulieu_demo if absent, applies the application schema and audit migration, copies the corpus in batches, creates a cosine HNSW index and verifies row counts. It does not copy benchmark users/MFA, audit data, query cases or benchmark measurements. It never drops or truncates a database; an incomplete pre-existing Demo database is refused for manual inspection.
+
+The user-provisioning script prompts for a shared Demo password, creates nv_dev, mgr_tech, mgr_sales, ceo_boss and partner_01, and prints fresh TOTP secrets/URIs once. Save each TOTP secret in an Authenticator app. It refuses to rotate existing credentials unless --rotate is explicitly requested.
+
+Start the local UI with:
+
+~~~powershell
+.\scripts\start_demo.ps1
+~~~
+
+Open http://127.0.0.1:8765. The Demo server and interactive Controlled RAG are pinned to baomatdulieu_demo; POSTGRES_DB stays baomatdulieu and BENCHMARK_DB_NAME stays baomatdulieu_benchmark.
+
+See README_DEMO.md for the complete Demo checklist, account roles, troubleshooting and test instructions.

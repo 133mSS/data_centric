@@ -24,6 +24,16 @@ def _secret_key() -> bytes:
     return key
 
 
+def _current_database(conn) -> str:
+    """Return the database audience for a token; fail closed if unavailable."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT current_database()")
+        row = cur.fetchone()
+    if not row or not isinstance(row[0], str) or not row[0]:
+        raise AuthenticationError("Invalid token audience")
+    return row[0]
+
+
 def _b64encode(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
 
@@ -63,7 +73,14 @@ def authenticate(conn, username: str, password: str, otp: str) -> str:
     if not otp_ok:
         raise AuthenticationError("Invalid credentials")
 
-    payload = {"uid": int(user_id), "exp": int(time.time()) + 3600}
+    # Bind the signed token to the database that authenticated the user. This
+    # prevents a valid app-database token from being replayed against the
+    # separately provisioned Demo database when numeric user IDs overlap.
+    payload = {
+        "uid": int(user_id),
+        "exp": int(time.time()) + 3600,
+        "aud": _current_database(conn),
+    }
     payload_segment = _b64encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
     return f"{payload_segment}.{_sign(payload_segment)}"
 
@@ -78,9 +95,17 @@ def user_from_token(conn, token: str) -> dict:
         if not hmac.compare_digest(signature, expected):
             raise AuthenticationError("Invalid token")
         payload = json.loads(_b64decode(payload_segment).decode("utf-8"))
-        uid, exp = payload["uid"], payload["exp"]
-        if not isinstance(uid, int) or not isinstance(exp, int) or exp <= int(time.time()):
+        uid, exp, audience = payload["uid"], payload["exp"], payload["aud"]
+        if (
+            not isinstance(uid, int)
+            or not isinstance(exp, int)
+            or exp <= int(time.time())
+            or not isinstance(audience, str)
+            or not audience
+        ):
             raise AuthenticationError("Invalid or expired token")
+        if not hmac.compare_digest(audience, _current_database(conn)):
+            raise AuthenticationError("Invalid token audience")
     except AuthenticationError:
         raise
     except (ValueError, TypeError, KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:

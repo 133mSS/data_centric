@@ -40,7 +40,7 @@ def test_controlled_query_filters_acl_before_limit(monkeypatch):
 
     cursor.fetchall.side_effect = [
         [],  # Shadow baseline
-        [(1, 10, "Allowed doc", "INTERNAL", "IT", "content", 0.9)],
+        [(1, 10, "Allowed doc", "INTERNAL", "IT", "content", 0.9, "GENERAL_INTERNAL")],
     ]
 
     allowed, denied = vs.vector_search_with_audit(
@@ -149,3 +149,208 @@ def test_failed_search_clears_stale_audit_metadata(monkeypatch):
         vs.vector_search(None, {"id": 1}, "test query")
 
     assert vs.get_last_denied_shadow_chunks() == []
+
+
+
+def test_title_exact_match_boosts_correct_document_without_bypassing_acl(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(
+        vs, "enforce_access",
+        lambda user, doc: MagicMock(effect="ALLOW"),
+    )
+    # Candidate order is vector-only order: unrelated document first.
+    cursor.fetchall.side_effect = [
+        [],  # Shadow baseline
+        [
+            (7, 11, "Thông báo bảo trì", "Nội bộ", "Kỹ thuật",
+             "Nội dung bảo trì", 0.67, "MAINTENANCE_NOTICE"),
+            (6, 10, "Mã nguồn hệ thống RAG", "Nội bộ", "Kỹ thuật",
+             "Module policy_engine.py kiểm tra quyền truy cập.", 0.614, "TECHNICAL_SENSITIVE"),
+        ],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1}, "Mã nguồn hệ thống RAG", top_k=1
+    )
+
+    assert denied == []
+    assert len(allowed) == 1
+    assert allowed[0][1] == 10
+    # The SQL candidate search still enforces the allow-list before LIMIT.
+    controlled_sql = cursor.execute.call_args_list[1].args[0]
+    normalized = " ".join(controlled_sql.split())
+    assert "WHERE c.document_id = ANY(%s)" in normalized
+    assert normalized.index("WHERE") < normalized.index("ORDER BY") < normalized.index("LIMIT")
+
+
+
+def test_short_title_phrase_receives_title_coverage_boost(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+    cursor.fetchall.side_effect = [
+        [],
+        [
+            (7, 11, "Thông báo bảo trì", "Nội bộ", "Kỹ thuật",
+             "Nội dung bảo trì", 0.65, "MAINTENANCE_NOTICE"),
+            (6, 10, "Mã nguồn hệ thống RAG", "Nội bộ", "Kỹ thuật",
+             "Module policy_engine.py kiểm tra quyền truy cập.", 0.64, "TECHNICAL_SENSITIVE"),
+        ],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1}, "Mã nguồn RAG", top_k=1
+    )
+
+    assert denied == []
+    assert allowed[0][1] == 10
+
+
+
+def test_explicit_document_reference_is_retrieved_by_acl_filtered_title_lookup(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    # The vector-first pool contains a high-similarity neighbor, while the
+    # exact requested document is returned by the parameterized title lookup.
+    vector_neighbor = (
+        99, 11, "Access Service — Báo cáo vận hành — hồ sơ 00038",
+        "Nội bộ", "Kỹ thuật", "Nội dung liên quan vận hành.", 0.90,
+        "GENERAL_INTERNAL",
+    )
+    exact_document = (
+        38, 10, "Core Platform — Quy trình nội bộ — hồ sơ 00038",
+        "Nội bộ", "Kỹ thuật",
+        "Hồ sơ 00038 của Core Platform đề cập đến quy trình nội bộ.",
+        0.55, "GENERAL_INTERNAL",
+    )
+    cursor.fetchall.side_effect = [
+        [],                  # Shadow baseline (audit only).
+        [vector_neighbor],   # Approximate vector candidates.
+        [exact_document],    # Exact ID + title match inside the PDP allow-list.
+    ]
+
+    query = "cho tôi thông tin về Core Platform — Quy trình nội bộ — hồ sơ số 00038"
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        query, top_k=1,
+    )
+
+    assert denied == []
+    assert len(allowed) == 1
+    assert allowed[0][1] == 10
+    assert allowed[0][2] == "Core Platform — Quy trình nội bộ — hồ sơ 00038"
+
+    # The lexical lookup remains scoped to the exact same PDP allow-list.
+    lookup_call = cursor.execute.call_args_list[2]
+    lookup_sql, lookup_params = lookup_call.args
+    normalized_sql = " ".join(lookup_sql.split())
+    assert "WHERE c.document_id = ANY(%s)" in normalized_sql
+    assert "POSITION(%s IN d.title) > 0" in normalized_sql
+    assert lookup_params[1] == [10, 11]
+    assert lookup_params[2] == "00038"
+    assert lookup_params[3] >= 100
+    assert "tim" not in lookup_params  # Request filler is never a title constraint.
+
+
+
+def test_explicit_unknown_record_id_does_not_fall_back_to_nearby_vector_results(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    # A semantically similar document exists in the vector pool, but not the
+    # requested record number. It must not be used as a substitute.
+    cursor.fetchall.side_effect = [
+        [],
+        [(99, 10, "Core Platform — hồ sơ 00062", "Nội bộ", "Kỹ thuật",
+          "Nội dung hồ sơ 00062.", 0.99, "GENERAL_INTERNAL")],
+        [],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        "tìm thông tin về hồ sơ 00042", top_k=3,
+    )
+
+    assert allowed == []
+    assert denied == []
+    assert cursor.execute.call_count == 3
+
+
+
+def test_bare_record_id_returns_all_chunks_when_only_one_allowed_record_matches(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    record_chunks = [
+        (101, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Chunk 1: hồ sơ đề cập đến giám sát dịch vụ.", 0.7, "GENERAL_INTERNAL"),
+        (102, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Chunk 2: nhóm phụ trách và trạng thái.", 0.6, "GENERAL_INTERNAL"),
+        (103, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Chunk 3: phân loại và mã tham chiếu.", 0.5, "GENERAL_INTERNAL"),
+    ]
+    cursor.fetchall.side_effect = [
+        [],
+        [(999, 10, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+          "Nội bộ", "Kỹ thuật", "Vector neighbor", 0.8, "GENERAL_INTERNAL")],
+        record_chunks,
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        "tìm thông tin về hồ sơ 00006", top_k=3,
+    )
+
+    assert denied == []
+    assert [row[0] for row in allowed] == [101, 102, 103]
+    assert {row[1] for row in allowed} == {10}
+
+
+
+def test_full_doc_reference_code_matches_unique_document_content(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10, 11])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    exact_chunk = (
+        301, 10, "Core Platform — Quy trình nội bộ — hồ sơ 00038",
+        "Nội bộ", "Kỹ thuật",
+        "Hồ sơ DOC-1000-00038: Core Platform đề cập đến quy trình nội bộ.",
+        0.65, "GENERAL_INTERNAL",
+    )
+    cursor.fetchall.side_effect = [
+        [],
+        [(302, 11, "DataHub — Phát triển phần mềm — hồ sơ 00038",
+          "Nội bộ", "Kinh doanh", "Nội dung DOC-5000-00038.", 0.99, "GENERAL_INTERNAL")],
+        [exact_chunk],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        "tìm hồ sơ DOC-1000-00038", top_k=3,
+    )
+
+    assert denied == []
+    assert len(allowed) == 1
+    assert allowed[0][1] == 10
+    lookup_sql, lookup_params = cursor.execute.call_args_list[2].args
+    assert "POSITION(%s IN d.content) > 0" in " ".join(lookup_sql.split())
+    assert "DOC-1000-00038" in lookup_params
+    assert "DOC-5000-00038" not in lookup_params

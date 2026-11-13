@@ -70,3 +70,26 @@ def test_contextual_phrase_is_redacted_only_for_relevant_source_profile(
     assert unrelated_result["decision"] == "ALLOW"
     assert unrelated_result["answer"] == answer
     assert unrelated_result["matched_count"] == 0
+
+def test_technical_filename_is_allowed_in_internal_assistant_but_redacted_for_share():
+    answer = "Module policy_engine.py chịu trách nhiệm kiểm tra quyền truy cập."
+    source = {
+        "document_id": 6,
+        "text": "Tài liệu kỹ thuật nội bộ đề cập tên file policy_engine.py.",
+    }
+
+    internal_result = process_output_safely(
+        answer=answer,
+        source_documents=[source],
+        release_context="INTERNAL_ASSISTANT",
+    )
+    share_result = process_output_safely(
+        answer=answer,
+        source_documents=[source],
+        release_context="SHARE_SUMMARY",
+    )
+
+    assert internal_result["decision"] == "ALLOW"
+    assert internal_result["answer"] == answer
+    assert share_result["decision"] == "REDACT"
+    assert "policy_engine.py" not in share_result["answer"]

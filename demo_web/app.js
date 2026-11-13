@@ -1,8 +1,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const state = { token: sessionStorage.getItem('rag_demo_token') || '', user: null, documents: [] };
+  const state = { token: sessionStorage.getItem('rag_demo_token') || '', user: null, documents: [], documentsPage: 1, documentsPageSize: 50, documentsTotal: 0, documentsTotalPages: 1 };
   const titles = { overview: 'Tổng quan hệ thống', chat: 'Hỏi đáp RAG', documents: 'Tài liệu được phép', audit: 'Nhật ký kiểm soát', experiments: 'Kết quả thực nghiệm' };
   let toastTimer;
+  let documentSearchTimer;
 
   function toast(message) {
     const node = $('toast'); node.textContent = message; node.classList.add('show');
@@ -52,11 +53,11 @@
       setService('vector-service','vector-detail',vectorsOk, vectorsOk ? 'Đã có embeddings' : 'Thiếu embeddings', `${h.database?.embedded_chunks ?? 0}/${h.database?.chunks ?? 0} chunks có vector`);
       if (h.database?.ok && !h.database?.fixture_users_ready) {
         $('fixture-warning').classList.remove('hidden');
-        $('fixture-warning').innerHTML = `Tài khoản demo chưa sẵn sàng (${h.database.fixture_users_count || 0}/5 có MFA). Cần kiểm tra fixture users trong database <b>baomatdulieu</b>. Không chạy seed lại nếu chưa chấp nhận việc xoay mật khẩu và MFA.`;
+        $('fixture-warning').innerHTML = `Tài khoản demo chưa sẵn sàng (${h.database.fixture_users_count || 0}/5 có MFA). Cần kiểm tra fixture users trong database <b>baomatdulieu_demo</b>. Không chạy seed lại nếu chưa chấp nhận việc xoay mật khẩu và MFA.`;
       } else $('fixture-warning').classList.add('hidden');
       if (h.database?.ok && (h.database?.chunks_missing_embedding || 0) > 0) {
         $('fixture-warning').classList.remove('hidden');
-        $('fixture-warning').innerHTML += ` <br>Database ứng dụng còn <b>${h.database.chunks_missing_embedding}</b> chunk chưa có embedding. Sau khi Ollama sẵn sàng, chạy <code>python app/generate_embeddings.py</code> từ thư mục gốc với <code>POSTGRES_DB=baomatdulieu</code>. Không chạy trên database benchmark.`;
+        $('fixture-warning').innerHTML += ` <br>Database Demo <b>baomatdulieu_demo</b> còn <b>${h.database.chunks_missing_embedding}</b> chunk chưa có embedding. Runtime Demo không tự tạo vector. Hãy kiểm tra quá trình provision/copy từ benchmark và inventory của Demo DB; không chạy script tạo embedding trên <code>baomatdulieu</code> hoặc <code>baomatdulieu_benchmark</code> để sửa lỗi của Demo.`;
       }
     } catch (err) { $('system-status').textContent = 'Không kiểm tra được dịch vụ'; }
   }
@@ -78,6 +79,12 @@
   async function loadOverview() {
     try {
       const d = await api('/api/overview'); state.user = d.user;
+      const contextBadge = $('context-lock');
+      if (contextBadge) {
+        contextBadge.textContent = d.release_context === 'INTERNAL_ASSISTANT'
+          ? '🔒 INTERNAL_ASSISTANT · NỘI BỘ'
+          : '🔒 SHARE_SUMMARY · CHIA SẺ HẠN CHẾ';
+      }
       $('metric-documents').textContent = d.allowed_documents;
       $('metric-chunks').textContent = d.allowed_chunks;
       $('metric-clearance').textContent = d.user.clearance_label;
@@ -90,15 +97,34 @@
       $('user-name').textContent = d.user.username; $('user-role').textContent = `${d.user.role} · ${d.user.department || 'Không thuộc phòng ban'}`;
     } catch (err) { toast(err.message); }
   }
-  async function loadDocuments() {
+
+  async function loadDocuments(page = 1) {
+    state.documentsPage = page;
     $('documents-body').innerHTML = `<tr><td colspan="6" class="empty-state">Đang tải…</td></tr>`;
-    try { const data = await api('/api/documents'); state.documents = data.documents || []; $('documents-count').textContent = `${data.count} tài liệu được phép`; renderDocuments(); }
-    catch (err) { $('documents-body').innerHTML = `<tr><td colspan="6" class="empty-state">${esc(err.message)}</td></tr>`; }
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(state.documentsPageSize),
+        q: $('document-filter').value || ''
+      });
+      const data = await api(`/api/documents?${params.toString()}`);
+      state.documents = data.documents || [];
+      state.documentsTotal = Number(data.count || 0);
+      state.documentsPage = Number(data.page || 1);
+      state.documentsTotalPages = Number(data.total_pages || 1);
+      $('documents-count').textContent = `${state.documentsTotal.toLocaleString('vi-VN')} tài liệu được phép`;
+      renderDocuments();
+    } catch (err) {
+      $('documents-body').innerHTML = `<tr><td colspan="6" class="empty-state">${esc(err.message)}</td></tr>`;
+      $('documents-page-info').textContent = 'Không tải được danh sách';
+    }
   }
   function renderDocuments() {
-    const filter = ($('document-filter').value || '').toLowerCase();
-    const rows = state.documents.filter(d => d.title.toLowerCase().includes(filter));
+    const rows = state.documents;
     $('documents-body').innerHTML = rows.length ? rows.map(d => `<tr><td>#${d.id}</td><td><b>${esc(d.title)}</b></td><td>${classificationBadge(d.classification)}</td><td>${esc(d.department || 'Toàn công ty / Không gán')}</td><td><code>${esc(d.protection_profile)}</code></td><td>${d.chunks}</td></tr>`).join('') : `<tr><td colspan="6" class="empty-state">Không có tài liệu phù hợp.</td></tr>`;
+    $('documents-page-info').textContent = `Trang ${state.documentsPage} / ${state.documentsTotalPages} · ${rows.length} tài liệu trên trang`;
+    $('documents-prev').disabled = state.documentsPage <= 1;
+    $('documents-next').disabled = state.documentsPage >= state.documentsTotalPages;
   }
   function classificationBadge(value) {
     let c=''; if(value==='Công khai')c='public'; else if(value==='Nội bộ')c='internal'; else if(['Mật','Tối mật'].includes(value))c='secret';
@@ -136,7 +162,7 @@
     const answerText = data.answer || 'Không có câu trả lời được phép phát hành.';
     const insufficient = /không có đủ thông tin để trả lời|chưa đủ thông tin để trả lời/i.test(answerText);
     const head=document.createElement('b');
-    head.textContent = insufficient ? `Chưa đủ căn cứ từ tài liệu · DLP ${decision}` : `Quyết định DLP · ${decision}`;
+    head.textContent = decision === 'NO_RESULT' ? 'Không tìm thấy tài liệu phù hợp trong phạm vi quyền' : decision === 'BLOCK' ? 'Câu trả lời bị chặn bởi kiểm soát an toàn' : insufficient ? `Chưa đủ căn cứ từ tài liệu · DLP ${decision}` : `Quyết định DLP · ${decision}`;
     const p=document.createElement('p');p.textContent=answerText;
     body.append(head,p);
     // Source metadata is intentionally not repeated under every answer. The
@@ -146,14 +172,12 @@
   function renderTrace(data) {
     const trace=data.trace||[];
     const sourceRows=(data.sources||[]).map(source=>`<div class="trace-source-item"><b>#${esc(source.id)} · ${esc(source.title)}</b><small>${esc(source.classification)} · ${esc(source.department || 'Không gán phòng ban')} · ${esc(source.protection_profile)}</small></div>`).join('');
-    const sourceDetail=sourceRows ? `<details class="trace-sources"><summary>Tài liệu trong Top-K (${data.sources.length})</summary><div class="trace-source-list">${sourceRows}</div><p class="trace-source-note">Đây là các tài liệu được truy xuất sau lọc quyền trong lượt hỏi này; danh sách không khẳng định mô hình đã sử dụng mọi tài liệu để tạo câu trả lời.</p></details>` : '';
+    const sourceDetail=sourceRows ? `<details class="trace-sources"><summary>Tài liệu trong Top-K (${data.sources.length})</summary><div class="trace-source-list">${sourceRows}</div><p class="trace-source-note">Đây là tài liệu được truy xuất sau khi lọc quyền; không đồng nghĩa mô hình đã sử dụng tất cả tài liệu để tạo câu trả lời.</p></details>` : '';
     const traceContent = $('trace-content');
-    // The empty state uses display:flex for its centered placeholder. Remove
-    // that class after the first result so timeline, summary and source details
-    // stack vertically instead of being squeezed into side-by-side columns.
     traceContent.classList.remove('trace-empty');
     traceContent.classList.add('trace-populated');
-    traceContent.innerHTML = `<div class="trace-list">${trace.map(t=>`<div class="trace-item ${esc(clsDecision(t.decision))}"><b>${esc(t.stage)} · ${esc(t.decision)}</b><small>${esc(t.detail)}</small></div>`).join('')}</div><div class="trace-summary"><b>Request ID</b><br><code>${esc(data.request_id)}</code><br><br><b>Release context</b>: ${esc(data.release_context)}<br><b>Retrieval</b>: ${data.retrieval?.allowed_chunks_logged || 0} lượt ALLOW · ${data.retrieval?.denied_candidate_occurrences || 0} lượt DENY bị loại<br><b>DLP audit events</b>: ${data.dlp_match_events || 0}</div>${sourceDetail}`;
+    const contextLabel = data.release_context === "INTERNAL_ASSISTANT" ? "Hỏi đáp nội bộ" : data.release_context === "SHARE_SUMMARY" ? "Chia sẻ tóm tắt" : (data.release_context || "Không xác định");
+    traceContent.innerHTML = `<div class="trace-list">${trace.map(t=>`<div class="trace-item ${esc(clsDecision(t.decision))}"><b>${esc(t.stage)} · ${esc(t.decision)}</b><small>${esc(t.detail)}</small></div>`).join('')}</div><div class="trace-summary"><b>Request ID</b><br><code>${esc(data.request_id)}</code><br><br><b>Release context</b>: ${esc(contextLabel)} <code>${esc(data.release_context || "")}</code><br><b>Retrieval</b>: ${data.retrieval?.allowed_chunks_logged || 0} lượt ALLOW · ${data.retrieval?.denied_candidate_occurrences || 0} lượt DENY bị loại<br><b>DLP</b>: ${data.output_dlp_executed ? "Đã thực thi" : "Không chạy"} · ${data.dlp_match_count ?? data.dlp_match_events ?? 0} match</div>${sourceDetail}`;
   }
   function pctBar(label,value,colorClass='') { const pct=Math.max(0,Math.min(100,Number(value)||0)); return `<div class="bar-line"><span>${esc(label)}</span><div class="bar-track"><div class="bar-value ${colorClass}" style="width:${pct}%"></div></div><span class="bar-number">${pct.toFixed(1)}%</span></div>`; }
   async function loadExperiments() {
@@ -188,7 +212,9 @@
   $('logout-btn').addEventListener('click',()=>logout());
   $('refresh-overview').addEventListener('click',()=>{loadHealth();loadOverview();toast('Đã làm mới trạng thái hệ thống.')});
   $('refresh-audit').addEventListener('click',loadAudit);
-  $('document-filter').addEventListener('input',renderDocuments);
+  $('document-filter').addEventListener('input',()=>{ clearTimeout(documentSearchTimer); documentSearchTimer=setTimeout(()=>loadDocuments(1),300); });
+  $('documents-prev').addEventListener('click',()=>loadDocuments(Math.max(1,state.documentsPage-1)));
+  $('documents-next').addEventListener('click',()=>loadDocuments(Math.min(state.documentsTotalPages,state.documentsPage+1)));
   $('chat-form').addEventListener('submit',e=>{e.preventDefault();sendChat($('chat-query').value)});
   document.querySelectorAll('[data-query]').forEach(btn=>btn.addEventListener('click',()=>{ $('chat-query').value=btn.dataset.query;sendChat(btn.dataset.query); }));
 
