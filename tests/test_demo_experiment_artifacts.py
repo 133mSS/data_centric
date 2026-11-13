@@ -13,7 +13,7 @@ def test_experiment_summary_loads_timestamped_wp6_artifact(tmp_path, monkeypatch
     results.mkdir()
     artifact = results / "wp6_retrieval_matrix_seed4206_20261113.csv"
     artifact.write_text(
-        "pass,actual\\nTrue,ALLOW\\nTrue,DENY\\n",
+        "pass,actual\nTrue,ALLOW\nTrue,DENY\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(demo_server, "ROOT", tmp_path)
