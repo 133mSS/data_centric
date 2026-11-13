@@ -344,5 +344,27 @@ class TestControlledRAG(unittest.TestCase):
         assert all(call.kwargs.get("release_context") == "INTERNAL_ASSISTANT" for call in audit.call_args_list)
 
 
+    def test_empty_retrieval_returns_no_result_without_running_dlp(self):
+        from controlled_rag import _answer_query_with_connection
+
+        fake_conn = MagicMock()
+        user = {"id": 1, "username": "nv_dev", "role": "Nhân viên", "department": "Kỹ thuật"}
+        with (
+            patch("controlled_rag.user_from_token", return_value=user),
+            patch("controlled_rag.vector_search", return_value=[]),
+            patch("controlled_rag.get_last_denied_shadow_chunks", return_value=[]),
+            patch("controlled_rag.process_output_safely") as dlp,
+            patch("controlled_rag.log_decision") as audit,
+        ):
+            result = _answer_query_with_connection(fake_conn, "signed-token", "Một câu hỏi không có tài liệu")
+
+        assert result["decision"] == "NO_RESULT"
+        assert result["output_dlp_executed"] is False
+        assert result["release_context"] == "INTERNAL_ASSISTANT"
+        dlp.assert_not_called()
+        audit.assert_not_called()
+        fake_conn.commit.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
