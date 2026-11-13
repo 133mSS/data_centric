@@ -135,28 +135,42 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         "cho", "toi", "thong", "tin", "ve", "so", "ho", "tai", "lieu",
         "duoc", "cung", "cap", "nhu", "the", "nao", "la", "gi", "cua",
         "va", "trong", "mot", "cac", "nhung", "hay", "giup", "biet",
-        "tim", "tra", "cuu", "kiem", "vui", "long", "ban", "theo",
+        "tim", "tra", "cuu", "kiem", "vui", "long", "ban", "theo", "doc",
     }
     query_terms = _terms(query)
     title_search_terms = sorted({
         term for term in query_terms
         if _strip_vietnamese_diacritics(term) not in stopwords
-        and not re.fullmatch(r"\d{5,}", term)
+        and not re.fullmatch(r"\d+", term)
     })
 
     # Supplement vector candidates with a parameterized, ACL-filtered title
     # lookup. This is important for explicit document IDs/titles, which may be
     # absent from the first approximate-nearest-neighbour window. It never
     # searches outside the allow-list returned by PDP.
-    reference_ids = re.findall(r"(?<!\d)\d{5,}(?!\d)", query)
+    full_reference_codes = re.findall(
+        r"(?<![A-Z0-9])DOC-\\d{4,}-\\d{5,}(?!\\d)",
+        query,
+        flags=re.IGNORECASE,
+    )
+    reference_ids = re.findall(r"(?<!\\d)\\d{5,}(?!\\d)", query)
+    has_record_reference = bool(full_reference_codes or reference_ids)
     title_candidates = []
-    if reference_ids:
-        # A record number is an identifier, not just another semantic token.
-        # Search it independently from natural-language filler ("tìm", "thông tin",
-        # "về", "hồ sơ"), and do not require every query word to occur in the title.
-        reference_conditions = " OR ".join(
-            ["POSITION(%s IN d.title) > 0"] * len(reference_ids)
-        )
+    if has_record_reference:
+        # A full DOC-scale-record code is globally unique in the synthetic
+        # corpus and is stored in documents.content/chunks.content. A short
+        # five-digit ID is repeated between scales, so search title and rerank
+        # by the other title terms. Both paths remain inside the PDP allow-list.
+        if full_reference_codes:
+            reference_conditions = " OR ".join(
+                ["POSITION(%s IN d.content) > 0"] * len(full_reference_codes)
+            )
+            reference_values = full_reference_codes
+        else:
+            reference_conditions = " OR ".join(
+                ["POSITION(%s IN d.title) > 0"] * len(reference_ids)
+            )
+            reference_values = reference_ids
         title_sql = f"""
             SELECT c.id AS chunk_id, c.document_id, d.title,
                    d.classification, d.department, c.content,
@@ -173,13 +187,13 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         with conn.cursor() as cur:
             cur.execute(
                 title_sql,
-                (query_vector, allowed_document_ids, *reference_ids, max(candidate_k, 100)),
+                (query_vector, allowed_document_ids, *reference_values, max(candidate_k, 100)),
             )
             title_candidates = cur.fetchall()
 
     # An explicit record number is a hard retrieval constraint. Never fall
     # back to semantically similar but differently numbered records.
-    if reference_ids:
+    if has_record_reference:
         if not title_candidates:
             return [], denied_shadow_chunks
         candidates = title_candidates
@@ -212,7 +226,7 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         # For explicit record-number lookups, lexical/title relevance must
         # dominate a noisy embedding score. ABAC was applied before this stage.
         vector_similarity = float(row[6] or 0.0)
-        if reference_ids:
+        if has_record_reference:
             lexical_boost = (
                 (0.30 if exact_phrase else 0.0)
                 + title_coverage * 0.40
@@ -231,7 +245,7 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         ranked.append((primary_score, vector_similarity, row))
 
     ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    if reference_ids and not title_search_terms:
+    if has_record_reference and not title_search_terms:
         # A bare repeated ID can map to several generated scales. If only one
         # allowed document has that ID, retain all its chunks for a stable,
         # complete summary. If multiple allowed documents share it, return one
