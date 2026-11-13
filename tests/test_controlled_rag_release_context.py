@@ -48,7 +48,7 @@ def test_demo_wrapper_selects_internal_context_after_loading_signed_user():
     with (
         patch.object(controlled_rag.psycopg2, "connect") as connect,
         patch.object(controlled_rag, "get_db_config", return_value={}),
-        patch.object(controlled_rag, "user_from_token", return_value=user) as verify,
+        patch.object(controlled_rag, "_verified_user_from_token", return_value=user) as verify,
         patch.object(controlled_rag, "vector_search", return_value=chunks),
         patch.object(controlled_rag, "get_last_denied_shadow_chunks", return_value=[]),
         patch.object(controlled_rag, "generate_answer", return_value="Module policy_engine.py"),
