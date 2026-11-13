@@ -116,3 +116,14 @@ All benchmark v1 data generation, embedding, query-case creation, retrieval exec
 - Exact-substring and structured-fact matching can miss paraphrase, semantic disclosure, and obfuscation. Zero observed matches in finite tests does not establish zero real-world leakage.
 - The leadership override is an explicit business-policy exception in this project and is not strict Bell–LaPadula enforcement for every role.
 - Keep `results/archive/` as historical evidence; do not mix results from different test cases/configurations without identifying their run IDs.
+
+## Demo DLP release contexts
+
+The local chat demo derives its Output DLP release context on the backend from the role loaded through the verified authentication token:
+- `Nhân viên`, `Manager`, and `Ban lãnh đạo` use `INTERNAL_ASSISTANT` for internal Q&A.
+- `Đối tác` and unknown roles use `SHARE_SUMMARY` (fail-closed default).
+- The browser cannot choose or override the release context.
+- ABAC/PDP remains the authorization boundary for document retrieval. `INTERNAL_ASSISTANT` does not expand the user's document permissions; it only changes the post-generation release policy for content that was already retrieved after ABAC filtering.
+- `SHARE_SUMMARY` continues to redact confirmed protected matches and block uncertain configured summaries.
+
+Run `python -m pytest -q` after pulling the demo branch. The regression tests cover role-to-context routing, technical filename redaction in share context, internal release, and no-result handling.
