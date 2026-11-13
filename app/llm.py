@@ -18,6 +18,10 @@ MIXED_LANGUAGE_FALLBACK = (
 _ID_MARKERS = (
     "yang", "pada", "untuk", "mendukung", "usaha", "kecil", "menengah",
     "adalah", "dengan", "perusahaan", "akan", "dari", "dalam",
+    # Stronger markers added for the exact drift observed in the local Demo:
+    # "tidak memiliki informasi tentang ...".
+    "tidak", "memiliki", "tentang", "informasi", "tersebut",
+    "mohon", "silakan", "berdasarkan", "tersedia", "ditemukan",
 )
 
 
