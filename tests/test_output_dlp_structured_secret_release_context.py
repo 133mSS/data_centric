@@ -43,3 +43,24 @@ def test_internal_assistant_keeps_answer_unchanged(answer, value):
     result = process_output_safely(answer, UNRELATED_SOURCE, "INTERNAL_ASSISTANT")
     assert result["decision"] == "ALLOW"
     assert result["answer"] == answer
+
+def test_internal_assistant_preserves_technical_profile_name_for_authorized_source():
+    source = {
+        "document_id": 6,
+        "text": "Module policy_engine.py chịu trách nhiệm kiểm tra quyền truy cập.",
+    }
+    answer = "Tài liệu mô tả module policy_engine.py kiểm tra quyền truy cập."
+    result = process_output_safely(answer, [source], "INTERNAL_ASSISTANT")
+    assert result["decision"] == "ALLOW"
+    assert result["answer"] == answer
+
+
+def test_share_summary_redacts_technical_profile_name_for_same_source():
+    source = {
+        "document_id": 6,
+        "text": "Module policy_engine.py chịu trách nhiệm kiểm tra quyền truy cập.",
+    }
+    answer = "Tài liệu mô tả module policy_engine.py kiểm tra quyền truy cập."
+    result = process_output_safely(answer, [source], "SHARE_SUMMARY")
+    assert result["decision"] == "REDACT"
+    assert "policy_engine.py" not in result["answer"]
