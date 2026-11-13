@@ -177,14 +177,19 @@ def vector_search_with_audit(conn, user, query, top_k=3):
             )
             title_candidates = cur.fetchall()
 
-    # De-duplicate chunks present in both candidate pools. Keep the set of
-    # ACL-filtered direct title matches so an exact identifier/title hit is not
-    # outranked by a merely similar vector neighbor.
+    # An explicit record number is a hard retrieval constraint. Never fall
+    # back to semantically similar but differently numbered records.
+    if reference_ids:
+        if not title_candidates:
+            return [], denied_shadow_chunks
+        candidates = title_candidates
+    else:
+        # De-duplicate chunks present in the vector candidate pool.
+        candidates_by_id = {row[0]: row for row in vector_candidates}
+        candidates = list(candidates_by_id.values())
+
+    # Every candidate here is already restricted by the PDP allow-list.
     title_candidate_ids = {row[0] for row in title_candidates}
-    candidates_by_id = {row[0]: row for row in vector_candidates}
-    for row in title_candidates:
-        candidates_by_id[row[0]] = row
-    candidates = list(candidates_by_id.values())
 
     query_terms_folded = {
         _strip_vietnamese_diacritics(t)
@@ -219,7 +224,22 @@ def vector_search_with_audit(conn, user, query, top_k=3):
         ranked.append((vector_similarity + lexical_boost, vector_similarity, row))
 
     ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
-    authorized_chunks = [item[2] for item in ranked[:top_k]]
+    if reference_ids and not title_search_terms:
+        # A bare repeated ID can map to multiple generated scales. Return one
+        # best chunk per distinct allowed document so the LLM can explain the
+        # ambiguity instead of filling top_k with chunks from one record.
+        authorized_chunks = []
+        seen_documents = set()
+        for item in ranked:
+            document_id = item[2][1]
+            if document_id in seen_documents:
+                continue
+            seen_documents.add(document_id)
+            authorized_chunks.append(item[2])
+            if len(authorized_chunks) >= top_k:
+                break
+    else:
+        authorized_chunks = [item[2] for item in ranked[:top_k]]
     return authorized_chunks, denied_shadow_chunks
 
 
