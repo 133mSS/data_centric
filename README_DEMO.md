@@ -62,7 +62,7 @@ Nếu backend báo fixture user hoặc MFA secret chưa có, hãy kiểm tra đ�
 
 - Server chỉ bind vào `127.0.0.1`; không mở ra mạng LAN hoặc Internet.
 - Không có chế độ bypass đăng nhập, không giả lập tài khoản, không cho browser tự chọn `release_context`.
-- `SHARE_SUMMARY` là release context cố định do backend gán, đúng với public controlled entrypoint hiện có.
+- Release context được backend suy ra từ role của user đã xác thực: `INTERNAL_ASSISTANT` cho Nhân viên/Manager/Ban lãnh đạo; `SHARE_SUMMARY` cho Đối tác và mọi role không xác định (fail closed). Browser không được gửi hoặc tự chọn release context.
 - Token được giữ trong `sessionStorage` của tab và hết hạn theo cơ chế token hiện có (1 giờ).
 - Không ghi password, OTP, token hoặc raw answer vào console server.
 - Giao diện chỉ đọc; không có chức năng upload/xóa/sửa tài liệu hoặc chạy script thực nghiệm từ trình duyệt.
