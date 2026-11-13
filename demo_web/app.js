@@ -1,8 +1,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const state = { token: sessionStorage.getItem('rag_demo_token') || '', user: null, documents: [] };
+  const state = { token: sessionStorage.getItem('rag_demo_token') || '', user: null, documents: [], documentsPage: 1, documentsPageSize: 50, documentsTotal: 0, documentsTotalPages: 1 };
   const titles = { overview: 'Tổng quan hệ thống', chat: 'Hỏi đáp RAG', documents: 'Tài liệu được phép', audit: 'Nhật ký kiểm soát', experiments: 'Kết quả thực nghiệm' };
   let toastTimer;
+  let documentSearchTimer;
 
   function toast(message) {
     const node = $('toast'); node.textContent = message; node.classList.add('show');
@@ -97,15 +98,33 @@
     } catch (err) { toast(err.message); }
   }
 
-  async function loadDocuments() {
+  async function loadDocuments(page = 1) {
+    state.documentsPage = page;
     $('documents-body').innerHTML = `<tr><td colspan="6" class="empty-state">Đang tải…</td></tr>`;
-    try { const data = await api('/api/documents'); state.documents = data.documents || []; $('documents-count').textContent = `${data.count} tài liệu được phép`; renderDocuments(); }
-    catch (err) { $('documents-body').innerHTML = `<tr><td colspan="6" class="empty-state">${esc(err.message)}</td></tr>`; }
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(state.documentsPageSize),
+        q: $('document-filter').value || ''
+      });
+      const data = await api(`/api/documents?${params.toString()}`);
+      state.documents = data.documents || [];
+      state.documentsTotal = Number(data.count || 0);
+      state.documentsPage = Number(data.page || 1);
+      state.documentsTotalPages = Number(data.total_pages || 1);
+      $('documents-count').textContent = `${state.documentsTotal.toLocaleString('vi-VN')} tài liệu được phép`;
+      renderDocuments();
+    } catch (err) {
+      $('documents-body').innerHTML = `<tr><td colspan="6" class="empty-state">${esc(err.message)}</td></tr>`;
+      $('documents-page-info').textContent = 'Không tải được danh sách';
+    }
   }
   function renderDocuments() {
-    const filter = ($('document-filter').value || '').toLowerCase();
-    const rows = state.documents.filter(d => d.title.toLowerCase().includes(filter));
+    const rows = state.documents;
     $('documents-body').innerHTML = rows.length ? rows.map(d => `<tr><td>#${d.id}</td><td><b>${esc(d.title)}</b></td><td>${classificationBadge(d.classification)}</td><td>${esc(d.department || 'Toàn công ty / Không gán')}</td><td><code>${esc(d.protection_profile)}</code></td><td>${d.chunks}</td></tr>`).join('') : `<tr><td colspan="6" class="empty-state">Không có tài liệu phù hợp.</td></tr>`;
+    $('documents-page-info').textContent = `Trang ${state.documentsPage} / ${state.documentsTotalPages} · ${rows.length} tài liệu trên trang`;
+    $('documents-prev').disabled = state.documentsPage <= 1;
+    $('documents-next').disabled = state.documentsPage >= state.documentsTotalPages;
   }
   function classificationBadge(value) {
     let c=''; if(value==='Công khai')c='public'; else if(value==='Nội bộ')c='internal'; else if(['Mật','Tối mật'].includes(value))c='secret';
@@ -193,7 +212,9 @@
   $('logout-btn').addEventListener('click',()=>logout());
   $('refresh-overview').addEventListener('click',()=>{loadHealth();loadOverview();toast('Đã làm mới trạng thái hệ thống.')});
   $('refresh-audit').addEventListener('click',loadAudit);
-  $('document-filter').addEventListener('input',renderDocuments);
+  $('document-filter').addEventListener('input',()=>{ clearTimeout(documentSearchTimer); documentSearchTimer=setTimeout(()=>loadDocuments(1),300); });
+  $('documents-prev').addEventListener('click',()=>loadDocuments(Math.max(1,state.documentsPage-1)));
+  $('documents-next').addEventListener('click',()=>loadDocuments(Math.min(state.documentsTotalPages,state.documentsPage+1)));
   $('chat-form').addEventListener('submit',e=>{e.preventDefault();sendChat($('chat-query').value)});
   document.querySelectorAll('[data-query]').forEach(btn=>btn.addEventListener('click',()=>{ $('chat-query').value=btn.dataset.query;sendChat(btn.dataset.query); }));
 
