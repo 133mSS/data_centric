@@ -98,3 +98,43 @@ def test_observed_indonesian_no_information_answer_is_detected_and_repaired():
     assert "memiliki" not in result.casefold()
     assert "tuyển dụng Data Engineering" in result
     assert mock_post.call_count == 2
+
+
+
+def test_chinese_script_answer_is_detected_and_repaired():
+    first = Mock()
+    first.raise_for_status.return_value = None
+    first.json.return_value = {
+        "response": "Hồ sơ này đang处理关于监控服务的内容。"
+    }
+    repaired = Mock()
+    repaired.raise_for_status.return_value = None
+    repaired.json.return_value = {
+        "response": "Hồ sơ này nói về nội dung giám sát dịch vụ."
+    }
+    chunks = [
+        (1, 1, "Access Service — Giám sát dịch vụ — hồ sơ 00006",
+         "Nội bộ", "Kỹ thuật", "Nội dung về giám sát dịch vụ.")
+    ]
+    with patch("app.llm.requests.post", side_effect=[first, repaired]) as mock_post:
+        result = generate_answer("Thông tin hồ sơ 00006", chunks)
+
+    assert result == "Hồ sơ này nói về nội dung giám sát dịch vụ."
+    assert mock_post.call_count == 2
+
+
+def test_chinese_script_after_repair_returns_safe_vietnamese_fallback():
+    first = Mock()
+    first.raise_for_status.return_value = None
+    first.json.return_value = {"response": "内容是关于监控服务。"}
+    second = Mock()
+    second.raise_for_status.return_value = None
+    second.json.return_value = {"response": "仍然是中文内容。"}
+    chunks = [
+        (1, 1, "Tài liệu thử nghiệm", "Nội bộ", "Kỹ thuật", "Nội dung thử nghiệm")
+    ]
+    with patch("app.llm.requests.post", side_effect=[first, second]) as mock_post:
+        result = generate_answer("Câu hỏi thử nghiệm", chunks)
+
+    assert result.startswith("Mô hình chưa tạo được câu trả lời tiếng Việt")
+    assert mock_post.call_count == 2
