@@ -48,7 +48,7 @@ def test_demo_wrapper_selects_internal_context_after_loading_signed_user():
     with (
         patch.object(controlled_rag.psycopg2, "connect") as connect,
         patch.object(controlled_rag, "get_db_config", return_value={}),
-        patch.object(controlled_rag, "user_from_token", return_value=user),
+        patch.object(controlled_rag, "user_from_token", return_value=user) as verify,
         patch.object(controlled_rag, "vector_search", return_value=chunks),
         patch.object(controlled_rag, "get_last_denied_shadow_chunks", return_value=[]),
         patch.object(controlled_rag, "generate_answer", return_value="Module policy_engine.py"),
@@ -66,10 +66,10 @@ def test_demo_wrapper_selects_internal_context_after_loading_signed_user():
         connect.return_value.__enter__.return_value = fake_conn
         result = controlled_rag.answer_internal_query("signed-token", "Mã nguồn hệ thống RAG")
 
+    verify.assert_called_once_with(fake_conn, "signed-token")
     assert result["release_context"] == "INTERNAL_ASSISTANT"
     assert result["answer"] == "Module policy_engine.py"
     assert dlp.call_args.kwargs["release_context"] == "INTERNAL_ASSISTANT"
-
 
 def test_demo_wrapper_keeps_partner_on_share_summary():
     fake_conn = MagicMock()
