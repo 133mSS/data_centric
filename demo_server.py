@@ -32,7 +32,7 @@ _LOGIN_FAILURES: dict[str, deque[float]] = defaultdict(deque)
 ROLE_CLEARANCE = {"Đối tác": 0, "Nhân viên": 1, "Manager": 2, "Ban lãnh đạo": 3}
 CLASSIFICATION_LEVEL = {"Công khai": 0, "Nội bộ": 1, "Mật": 2, "Tối mật": 3}
 FIXTURE_USERS = ("nv_dev", "mgr_tech", "mgr_sales", "partner_01", "ceo_boss")
-DEFAULT_RELEASE_CONTEXT = "SHARE_SUMMARY"  # Fallback only; chat context is resolved by Controlled RAG.
+DEFAULT_RELEASE_CONTEXT = "SHARE_SUMMARY"  # Unknown-role fallback; resolved release context comes from Controlled RAG.
 
 
 def _db_config():
