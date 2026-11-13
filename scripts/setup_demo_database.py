@@ -282,11 +282,16 @@ def main():
     if demo_config["dbname"] == source_config["dbname"]:
         raise RuntimeError("Source and destination databases must be different.")
 
-    with connect(source_config, "demo_benchmark_source_readonly") as source_conn:
+    source_conn = connect(source_config, "demo_benchmark_source_readonly")
+    try:
         source_conn.set_session(readonly=True, autocommit=False)
         benchmark_inventory(source_conn)
         create_target_database(demo_config)
-        with connect(demo_config, "demo_database_import") as demo_conn:
+
+        # Do not nest psycopg2 connection context managers. Schema/copy helpers
+        # each own their transaction on this explicitly managed connection.
+        demo_conn = connect(demo_config, "demo_database_import")
+        try:
             state = target_state(demo_conn)
             if state == "complete":
                 verified = verify_target(demo_conn)
@@ -304,6 +309,10 @@ def main():
             initialize_schema(demo_conn)
             copy_corpus(source_conn, demo_conn)
             verified = verify_target(demo_conn)
+        finally:
+            demo_conn.close()
+    finally:
+        source_conn.close()
 
     print(f"Provisioned database: {DEMO_DATABASE_NAME}")
     print(f"Copied documents: {verified[0]:,}")
