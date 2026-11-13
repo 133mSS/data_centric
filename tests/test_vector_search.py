@@ -258,3 +258,30 @@ def test_explicit_document_reference_is_retrieved_by_acl_filtered_title_lookup(m
     assert lookup_params[1] == [10, 11]
     assert "00038" in lookup_params
     # Request filler such as "tìm thông tin về hồ sơ" is not required in the title.
+
+
+
+def test_explicit_unknown_record_id_does_not_fall_back_to_nearby_vector_results(monkeypatch):
+    cursor = MagicMock()
+    conn = make_connection(cursor)
+    monkeypatch.setattr(vs, "get_allowed_document_ids", lambda conn, user: [10])
+    monkeypatch.setattr(vs, "create_query_embedding", lambda query: make_embedding())
+    monkeypatch.setattr(vs, "enforce_access", lambda user, doc: MagicMock(effect="ALLOW"))
+
+    # A semantically similar document exists in the vector pool, but not the
+    # requested record number. It must not be used as a substitute.
+    cursor.fetchall.side_effect = [
+        [],
+        [(99, 10, "Core Platform — hồ sơ 00062", "Nội bộ", "Kỹ thuật",
+          "Nội dung hồ sơ 00062.", 0.99, "GENERAL_INTERNAL")],
+        [],
+    ]
+
+    allowed, denied = vs.vector_search_with_audit(
+        conn, {"id": 1, "role": "Nhân viên", "department": "Kỹ thuật"},
+        "tìm thông tin về hồ sơ 00042", top_k=3,
+    )
+
+    assert allowed == []
+    assert denied == []
+    assert cursor.execute.call_count == 3
