@@ -7,7 +7,7 @@ from vector_search import vector_search, get_last_denied_shadow_chunks
 from audit import log_decision
 from llm import generate_answer
 from source_documents import chunks_to_source_documents
-from db_config import get_db_config
+from db_config import get_db_config, get_demo_db_config
 
 
 INTERNAL_RELEASE_ROLES = {"Nhân viên", "Manager", "Ban lãnh đạo"}
@@ -191,7 +191,7 @@ def answer_internal_query(token: str, query: str, top_k: int = 3) -> dict:
     try:
         # One DB session: resolve the signed identity once, then run the
         # retrieval and DLP pipeline for exactly that verified subject.
-        with psycopg2.connect(**get_db_config()) as conn:
+        with psycopg2.connect(**get_demo_db_config()) as conn:
             user = _verified_user_from_token(conn, token)
             if user is None:
                 return {
