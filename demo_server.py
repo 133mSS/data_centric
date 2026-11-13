@@ -534,7 +534,8 @@ class DemoHandler(BaseHTTPRequestHandler):
                          "sources": sources, "trace": trace,
                          "retrieval": {"allowed_chunks_logged": allowed, "denied_candidate_occurrences": denied},
                          "dlp_match_events": dlp_matches,
-                         "dlp_match_count": result.get("dlp_match_count", dlp_matches)})
+                         "dlp_match_count": result.get("dlp_match_count", dlp_matches),
+                         "note": "Release context ảnh hưởng quyết định Output DLP; phạm vi tài liệu vẫn do ABAC/PDP quyết định."})
 
 
 def main():
