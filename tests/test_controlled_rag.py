@@ -307,7 +307,6 @@ class TestControlledRAG(unittest.TestCase):
         fake_conn.commit.assert_called_once()
         fake_conn.close.assert_called_once()
 
-
     def test_internal_user_context_is_passed_to_output_dlp(self):
         from controlled_rag import _answer_query_with_connection
 
@@ -364,7 +363,6 @@ class TestControlledRAG(unittest.TestCase):
         dlp.assert_not_called()
         audit.assert_not_called()
         fake_conn.commit.assert_called_once()
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
