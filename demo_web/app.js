@@ -83,6 +83,10 @@
         ? '🔒 INTERNAL_ASSISTANT · NỘI BỘ'
         : '🔒 SHARE_SUMMARY · CHIA SẺ HẠN CHẾ';
       const contextBadge = $('context-lock');
+      if (contextBadge) contextBadge.textContent = d.release_context === 'INTERNAL_ASSISTANT'
+        ? '🔒 INTERNAL_ASSISTANT · NỘI BỘ'
+        : '🔒 SHARE_SUMMARY · CHIA SẺ HẠN CHẾ';
+      const contextBadge = $('context-lock');
       if (contextBadge) {
         const context = d.release_context;
         contextBadge.textContent = context === 'INTERNAL_ASSISTANT'
