@@ -187,8 +187,8 @@ def answer_internal_query(token: str, query: str, top_k: int = 3) -> dict:
         }
 
     try:
-        # One connection and one verified identity: do not resolve role in a
-        # separate transaction and then reopen a connection for the request.
+        # One DB session: resolve the signed identity once, then run the
+        # retrieval and DLP pipeline for exactly that verified subject.
         with psycopg2.connect(**get_db_config()) as conn:
             user = _verified_user_from_token(conn, token)
             if user is None:
@@ -200,8 +200,7 @@ def answer_internal_query(token: str, query: str, top_k: int = 3) -> dict:
                 }
             context = release_context_for_user(user)
             return _answer_query_with_connection(
-                conn, token, query, top_k=top_k,
-                release_context_override=context,
+                conn, token, query, top_k=top_k, release_context_override=context
             )
     except Exception:
         return {
