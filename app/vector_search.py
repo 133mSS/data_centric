@@ -141,7 +141,7 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     title_search_terms = sorted({
         term for term in query_terms
         if _strip_vietnamese_diacritics(term) not in stopwords
-        and not re.fullmatch(r"\\d{5,}", term)
+        and not re.fullmatch(r"\d{5,}", term)
     })
 
     # Supplement vector candidates with a parameterized, ACL-filtered title
