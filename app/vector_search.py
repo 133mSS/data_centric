@@ -149,11 +149,11 @@ def vector_search_with_audit(conn, user, query, top_k=3):
     # absent from the first approximate-nearest-neighbour window. It never
     # searches outside the allow-list returned by PDP.
     full_reference_codes = re.findall(
-        r"(?<![A-Z0-9])DOC-\\d{4,}-\\d{5,}(?!\\d)",
+        r"(?<![A-Z0-9])DOC-\d{4,}-\d{5,}(?!\d)",
         query,
         flags=re.IGNORECASE,
     )
-    reference_ids = re.findall(r"(?<!\\d)\\d{5,}(?!\\d)", query)
+    reference_ids = re.findall(r"(?<!\d)\d{5,}(?!\d)", query)
     has_record_reference = bool(full_reference_codes or reference_ids)
     title_candidates = []
     if has_record_reference:
