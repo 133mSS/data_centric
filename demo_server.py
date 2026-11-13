@@ -365,7 +365,8 @@ class DemoHandler(BaseHTTPRequestHandler):
             pass
         self._send_json({"database": db, "ollama": ollama,
                          "ready": db["ok"] and db.get("chunks_missing_embedding", 1) == 0
-                                  and ollama["llm_model"] and ollama["embedding_model"]})
+                                  and ollama["llm_model"] and ollama["embedding_model"],
+                         "note": "Kiểm tra dịch vụ và trạng thái dữ liệu demo; không thay thế kiểm thử bảo mật."})
 
     def _login(self, data):
         client = self.client_address[0]
