@@ -23,6 +23,13 @@ def release_context_for_user(user: dict) -> str:
     return DEFAULT_RELEASE_CONTEXT
 
 
+def _verified_user_from_token(conn, token: str):
+    """Load user attributes from a signed token, returning None on auth failure."""
+    try:
+        return user_from_token(conn, token)
+    except (AuthenticationError, RuntimeError):
+        return None
+
 def _answer_query_with_connection(
     conn, token, query, top_k=3, *, release_context_override=None
 ):
@@ -32,9 +39,8 @@ def _answer_query_with_connection(
     It is deliberately not accepted by the public answer_query() function.
     """
     request_id = str(uuid4())
-    try:
-        user = user_from_token(conn, token)
-    except (AuthenticationError, RuntimeError):
+    user = _verified_user_from_token(conn, token)
+    if user is None:
         return {
             "answer": "Yêu cầu xác thực không hợp lệ hoặc đã hết hạn.",
             "decision": "BLOCK", "retrieved_doc_ids": [], "request_id": request_id,
